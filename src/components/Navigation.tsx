@@ -23,9 +23,9 @@ const Navigation: React.FC = () => {
             <a href="/login" className="px-6 py-2 text-white bg-[#0056D2] hover:bg-[#0045b0] rounded transition-colors font-medium">
               Login
             </a>
-            <button className="px-6 py-2 text-white bg-[#0056D2] hover:bg-[#0045b0] rounded transition-colors font-medium">
+            <a href="/register" className="px-6 py-2 text-white bg-[#0056D2] hover:bg-[#0045b0] rounded transition-colors font-medium">
               Register
-            </button>
+            </a>
           </div>
         </div>
       </div>

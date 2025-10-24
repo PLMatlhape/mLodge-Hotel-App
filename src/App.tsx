@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react'
 import Home from './Pages/Home'
 import Login from './Pages/Login'
+import Register from './Pages/Register'
 import Dashboard from './Pages/Client/Dashboard'
+import Favorites from './Pages/Client/Favorites'
+import AccountInfo from './Pages/Client/AccountInfo'
 import './App.css'
 
 function App() {
@@ -27,8 +30,20 @@ function App() {
     return <Login />
   }
 
+  if (currentPath === '/register') {
+    return <Register />
+  }
+
   if (currentPath === '/dashboard') {
     return <Dashboard />
+  }
+
+  if (currentPath === '/favorites') {
+    return <Favorites />
+  }
+
+  if (currentPath === '/account') {
+    return <AccountInfo />
   }
 
   return <Home />
