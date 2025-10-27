@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import backgroundImage from '../../assets/image/background/Offers-section.jpeg';
 import backIcon from '../../assets/icons/white/white-back-button-icon.png';
 
-const AccountInfo: React.FC = () => {
+const Profile: React.FC = () => {
   const [editing, setEditing] = useState(false);
   const [firstName, setFirstName] = useState('Tlholo');
   const [lastName, setLastName] = useState('Tshwane');
@@ -215,4 +215,4 @@ const AccountInfo: React.FC = () => {
   );
 };
 
-export default AccountInfo;
+export default Profile;

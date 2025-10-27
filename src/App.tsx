@@ -3,8 +3,9 @@ import Home from './Pages/Home'
 import Login from './Pages/Login'
 import Register from './Pages/Register'
 import Dashboard from './Pages/Client/Dashboard'
+import OfflineDashboard from './Pages/Client/OfflineDashboard'
 import Favorites from './Pages/Client/Favorites'
-import AccountInfo from './Pages/Client/AccountInfo'
+import Profile from './Pages/Client/Profile'
 import './App.css'
 
 function App() {
@@ -30,6 +31,10 @@ function App() {
     return <Login />
   }
 
+  if (currentPath === '/offline-dashboard') {
+    return <OfflineDashboard />
+  }
+
   if (currentPath === '/register') {
     return <Register />
   }
@@ -42,8 +47,8 @@ function App() {
     return <Favorites />
   }
 
-  if (currentPath === '/account') {
-    return <AccountInfo />
+  if (currentPath === '/profile') {
+    return <Profile />
   }
 
   return <Home />

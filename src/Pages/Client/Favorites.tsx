@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import starIcon from '../../assets/icons/yellow-star-rate-icon.png';
 import heartIcon from '../../assets/icons/yellow-heart-icon.png';
 import bathIcon from '../../assets/icons/black/black-bath-icon.png';
+import backIcon from '../../assets/icons/white/white-back-button-icon.png';
 import RoomDetails from './RoomDetails';
 
 // Room images (paths match imports used in Dashboard.tsx)
@@ -95,6 +96,12 @@ const Favorites: React.FC = () => {
       <div className="max-w-7xl mx-auto px-6 py-12">
         <h2 className="text-3xl font-semibold mb-2">My Favorites</h2>
         <p className="text-gray-200 mb-8">{favoriteRooms.length} rooms saved</p>
+
+        {/* Back to Dashboard Button */}
+      <a href="/dashboard" className="absolute top-8 right-8 z-20 flex items-center gap-2 text-white hover:opacity-80 transition-opacity">
+        <img src={backIcon} alt="Back" className="w-6 h-6" />
+        <span className="text-lg font-medium">Back</span>
+      </a>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {favoriteRooms.map((room) => (
