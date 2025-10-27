@@ -106,6 +106,10 @@ const HottestRooms: React.FC = () => {
     }
   ];
 
+  const handleLoginRedirect = () => {
+    window.location.href = '/login';
+  }
+
   return (
     <div>
       {/* Hottest Rooms Section */}
@@ -183,7 +187,9 @@ const HottestRooms: React.FC = () => {
                       <span className="text-gray-900 text-3xl font-bold">R{room.price}</span>
                       <span className="text-gray-500 text-sm">/night</span>
                     </div>
-                    <button className="bg-[#0F51AF] text-white px-6 py-2.5 rounded-lg hover:bg-[#0d4291] transition-colors font-medium">
+                    <button
+                    onClick={() => handleLoginRedirect()} 
+                    className="bg-[#0F51AF] text-white px-6 py-2.5 rounded-lg hover:bg-[#0d4291] transition-colors font-medium">
                       Book Now
                     </button>
                   </div>
