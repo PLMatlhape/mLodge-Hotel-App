@@ -21,3 +21,13 @@ body {
 * {
   box-sizing: border-box;
 }
+
+/* Hide scrollbars for admin pages while maintaining scroll functionality */
+.admin-scrollbar-hide {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.admin-scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
