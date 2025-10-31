@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import logo from '../../assets/image/Erxtras/Logo-mLodge-hotel.png';
+import Navigation from '../../components/Navigation';
 import searchIcon from '../../assets/icons/black/black-search-icon.png';
 import filterIcon from '../../assets/icons/black/black-filter-icon.png';
 import heartIcon from '../../assets/icons/yellow-heart-icon.png';
@@ -31,8 +32,8 @@ interface Room {
   favorite: boolean;
 }
 
-const Dashboard: React.FC = () => {
-  const [menuOpen, setMenuOpen] = useState(false);
+const OfflineDashboard: React.FC = () => {
+  //const [menuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(true);
   const [priceRange, setPriceRange] = useState([0, 10000]);
@@ -154,11 +155,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
-    // Handle logout logic
-    window.location.href = '/';
-  };
-
+ 
   return (
     <div className="min-h-screen relative">
       {/* Background Image */}
@@ -173,6 +170,7 @@ const Dashboard: React.FC = () => {
 
       {/* Content */}
       <div className="relative z-10">
+        <Navigation />
         {/* Header */}
         <header className="bg-[#001F3F] px-6 py-4 flex items-center justify-center">
         {/* Logo */}
@@ -193,48 +191,7 @@ const Dashboard: React.FC = () => {
             <p className="text-gray-300 text-lg">Search and filter through our collection of premium rooms</p>
           </div>
 
-          {/* Hamburger Menu */}
-          <div className="relative">
-            <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="flex flex-col gap-1.5 p-2 bg-[#0F51AF] rounded-lg hover:bg-[#0d4291] transition-colors"
-            >
-              <span className="w-6 h-0.5 bg-white rounded"></span>
-              <span className="w-6 h-0.5 bg-white rounded"></span>
-              <span className="w-6 h-0.5 bg-white rounded"></span>
-            </button>
-
-            {/* Dropdown Menu */}
-            {menuOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl overflow-hidden z-50">
-                <button
-                  onClick={() => window.location.href = '/profile'}
-                  className="w-full px-4 py-3 text-left text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-3"
-                >
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                  </svg>
-                  Profile
-                </button>
-                <button
-                  onClick={() => window.location.href = '/favorites'}
-                  className="w-full px-4 py-3 text-left text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-3 border-t"
-                >
-                  <img src={heartIcon} alt="Favorites" className="w-5 h-5" />
-                  Favorites
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="w-full px-4 py-3 text-left text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-3 border-t"
-                >
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
-                  </svg>
-                  Logout
-                </button>
-              </div>
-            )}
-          </div>
+          
         </div>
 
         {/* Search and Filter Bar */}
@@ -278,7 +235,7 @@ const Dashboard: React.FC = () => {
                     className="text-[#0F51AF] font-medium hover:underline"
                     aria-label="Close filters"
                   >
-                     Clear
+                    × Clear
                   </button>
                 </div>
 
@@ -486,4 +443,4 @@ const Dashboard: React.FC = () => {
   );
 };
 
-export default Dashboard;
+export default OfflineDashboard;

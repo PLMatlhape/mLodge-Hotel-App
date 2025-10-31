@@ -139,10 +139,14 @@ const Events: React.FC = () => {
 
             {/* Action Buttons */}
             <div className="flex items-center justify-center gap-6">
-              <button className="bg-[#0F51AF] text-white px-10 py-3.5 rounded-lg hover:bg-[#0d4291] transition-colors font-medium text-lg">
+              <button
+              onClick={() => window.location.href = '/register'} 
+              className="bg-[#0F51AF] text-white px-10 py-3.5 rounded-lg hover:bg-[#0d4291] transition-colors font-medium text-lg">
                 Create account
               </button>
-              <button className="bg-transparent text-gray-900 border-2 border-gray-900 px-10 py-3.5 rounded-lg hover:bg-gray-900 hover:text-white transition-colors font-medium text-lg">
+              <button
+              onClick ={() => window.location.href = '/login'} 
+              className="bg-transparent text-gray-900 border-2 border-gray-900 px-10 py-3.5 rounded-lg hover:bg-gray-900 hover:text-white transition-colors font-medium text-lg">
                 Already a member?
               </button>
             </div>

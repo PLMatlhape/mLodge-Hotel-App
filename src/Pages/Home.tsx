@@ -7,17 +7,22 @@ import Events from './Events';
 import homeBackground from '../assets/image/background/Home-page-background.jpeg';
 
 const Home: React.FC = () => {
+  const handleExploreRooms = () => {
+    window.history.pushState(null, '', '/offline-dashboard');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  };
+
   return (
     <div className="min-h-screen bg-[#001F3F]">
       <Navigation />
-      
+
       {/* Hero Section */}
       <div className="relative h-screen">
         {/* Background Image with Overlay */}
         <div className="absolute inset-0">
-          <img 
-            src={homeBackground} 
-            alt="Hotel Room" 
+          <img
+            src={homeBackground}
+            alt="Hotel Room"
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-[#001F3F]/40"></div>
@@ -32,13 +37,18 @@ const Home: React.FC = () => {
             Experience unparalleled luxury and comfort in the heart of the city. Your<br />
             perfect escape awaits.
           </p>
-          
+
           {/* CTA Buttons */}
           <div className="flex gap-6">
-            <button className="px-7 py-3 bg-[#0056D2] text-white rounded hover:bg-[#0045b0] transition-colors font-medium">
+            <button
+              onClick={() => window.location.href = '/login'} 
+            className="px-7 py-3 bg-[#0056D2] text-white rounded hover:bg-[#0045b0] transition-colors font-medium">
               Book Your Stay
             </button>
-            <button className="px-7 py-3 bg-transparent text-white border-2 border-white rounded hover:bg-white/10 transition-colors font-medium">
+            <button
+              onClick={handleExploreRooms}
+              className="px-7 py-3 bg-transparent text-white border-2 border-white rounded hover:bg-white/10 transition-colors font-medium"
+            >
               Explore rooms
             </button>
           </div>
