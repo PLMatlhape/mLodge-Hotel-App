@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Home from './Pages/Home'
 import Login from './Pages/Login'
 import Dashboard from './Pages/Client/Dashboard'
+import AdminDashboard from './Pages/admin/AdminDashboard'
 import './App.css'
 
 function App() {
@@ -25,6 +26,10 @@ function App() {
   // Simple routing based on path
   if (currentPath === '/login') {
     return <Login />
+  }
+
+  if (currentPath.startsWith('/admin')) {
+    return <AdminDashboard />
   }
 
   if (currentPath === '/dashboard') {

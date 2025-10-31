@@ -10,8 +10,12 @@ const Login: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle login logic here - redirect to dashboard on success
-    window.location.href = '/dashboard';
+    // Check if admin credentials
+    if (username === 'Admin@mlodgehotel.co.za' && password === 'Admin@mlodgehotel') {
+      window.location.href = '/admin/overview';
+    } else {
+      window.location.href = '/dashboard';
+    }
   };
 
   return (
