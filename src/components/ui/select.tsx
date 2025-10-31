@@ -21,9 +21,9 @@ export const Select = ({ children, value, onValueChange }: { children: React.Rea
     // Find the label from children when value changes
     React.Children.forEach(children, child => {
       if (React.isValidElement(child) && child.type === SelectContent) {
-        React.Children.forEach(child.props.children, item => {
-          if (React.isValidElement(item) && item.props.value === value) {
-            const label = typeof item.props.children === 'string' ? item.props.children : value;
+        React.Children.forEach((child.props as any).children, item => {
+          if (React.isValidElement(item) && (item.props as any).value === value) {
+            const label = typeof (item.props as any).children === 'string' ? (item.props as any).children : value;
             setSelectedLabel(label);
           }
         });
@@ -95,9 +95,9 @@ export const SelectContent = ({ children, style, className = '' }: { children: R
       {React.Children.map(children, child => {
         if (React.isValidElement(child)) {
           return React.cloneElement(child, { 
-            ...child.props,
-            isSelected: child.props.value === context.value 
-          } as Record<string, unknown>);
+            ...(child.props as any),
+            isSelected: (child.props as any).value === context.value 
+          } as any);
         }
         return child;
       })}

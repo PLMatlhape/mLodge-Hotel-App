@@ -1,4 +1,4 @@
-import { TrendingUp, Calendar, DollarSign, Users, Star, Hotel } from 'lucide-react';
+import { Calendar, DollarSign, Users, Star, Hotel } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import backgroundImage from '../../assets/image/background/Offers-section.jpeg';

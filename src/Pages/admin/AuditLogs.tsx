@@ -35,7 +35,7 @@ const actionColors: { [key: string]: { bg: string; text: string } } = {
 };
 
 export function AdminAuditLogs() {
-  const [logs, setLogs] = useState(mockLogs);
+  const [logs] = useState(mockLogs);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterModule, setFilterModule] = useState('all');
   const [filterAction, setFilterAction] = useState('all');

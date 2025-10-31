@@ -11,7 +11,24 @@ import { Badge } from '../../components/ui/badge';
 import { toast } from '../../lib/toast';
 import backgroundImage from '../../assets/image/background/Offers-section.jpeg';
 
-const mockRefunds = [
+type RefundStatus = 'Pending' | 'Approved' | 'Processed' | 'Rejected';
+
+interface Refund {
+  id: string;
+  bookingId: string;
+  guest: string;
+  amount: number;
+  requestDate: string;
+  reason: string;
+  status: RefundStatus;
+  email: string;
+  approvedDate?: string;
+  processedDate?: string;
+  rejectedDate?: string;
+  rejectionReason?: string;
+}
+
+const mockRefunds: Refund[] = [
   { id: 'RF-2025-001', bookingId: 'BK-2025-1228', guest: 'Robert Wilson', amount: 9600, requestDate: '2025-10-18', reason: 'Personal emergency', status: 'Pending', email: 'robert@example.com' },
   { id: 'RF-2025-002', bookingId: 'BK-2025-1225', guest: 'Anna Taylor', amount: 5000, requestDate: '2025-10-17', reason: 'Flight cancelled', status: 'Approved', email: 'anna@example.com', approvedDate: '2025-10-18' },
   { id: 'RF-2025-003', bookingId: 'BK-2025-1222', guest: 'Chris Martin', amount: 2400, requestDate: '2025-10-16', reason: 'Overbooked', status: 'Processed', email: 'chris@example.com', processedDate: '2025-10-17' },
@@ -27,10 +44,10 @@ const statsData = [
 ];
 
 export function AdminRefunds() {
-  const [refunds, setRefunds] = useState(mockRefunds);
+  const [refunds, setRefunds] = useState<Refund[]>(mockRefunds);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [selectedRefund, setSelectedRefund] = useState<typeof mockRefunds[0] | null>(null);
+  const [selectedRefund, setSelectedRefund] = useState<Refund | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [adminNotes, setAdminNotes] = useState('');
 

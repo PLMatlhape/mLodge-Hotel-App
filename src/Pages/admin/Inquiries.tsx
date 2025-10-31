@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Search, Mail, AlertCircle, CheckCircle, Clock } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Search, Mail, AlertCircle, Clock } from 'lucide-react';
+import { Card, CardContent } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
@@ -207,7 +207,7 @@ export function AdminInquiries() {
                       <Badge className="text-xs" style={{ backgroundColor: statusColor.bg, color: statusColor.text }}>
                         {inquiry.status}
                       </Badge>
-                      <Badge variant="outline" className="text-xs border-blue-primary text-blue-primary">
+                      <Badge className="text-xs border border-blue-primary text-blue-primary">
                         {inquiry.category}
                       </Badge>
                     </div>

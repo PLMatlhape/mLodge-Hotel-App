@@ -1,22 +1,25 @@
 import { useState } from 'react';
 import { Plus, Edit2, Trash2, Hotel, DollarSign } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { Textarea } from '../../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Switch } from '../../components/ui/switch';
-import { Badge } from '../../components/ui/badge';
 import { toast } from '../../lib/toast';
 import backgroundImage from '../../assets/image/background/Offers-section.jpeg';
 
+// Room Images
+import luxuryPenthouse from '../../assets/image/dashboard/penthouse-room.jpeg';
+import deluxeOcean from '../../assets/image/dashboard/Deluxe Ocean View.jpeg';
+import executiveBusiness from '../../assets/image/dashboard/Executive-business-room.jpeg';
+
 const mockRooms = [
-  { id: 1, name: 'Luxury Penthouse', type: 'Premium', price: 8000, location: 'Cape Town', beds: 2, guests: 4, size: 120, available: true, amenities: ['WiFi', 'TV', 'Air Conditioning', 'Mini Bar', 'Ocean View'] },
-  { id: 2, name: 'Executive Suite', type: 'Deluxe', price: 4000, location: 'Johannesburg', beds: 1, guests: 2, size: 75, available: true, amenities: ['WiFi', 'TV', 'Air Conditioning', 'Work Desk'] },
-  { id: 3, name: 'Standard Room', type: 'Standard', price: 1200, location: 'Durban', beds: 1, guests: 2, size: 40, available: true, amenities: ['WiFi', 'TV'] },
-  { id: 4, name: 'Deluxe Ocean View', type: 'Deluxe', price: 5000, location: 'Durban', beds: 1, guests: 2, size: 85, available: false, amenities: ['WiFi', 'TV', 'Air Conditioning', 'Balcony', 'Ocean View'] },
+  { id: 1, name: 'Luxury Penthouse', type: 'Premium', price: 8000, location: 'Cape Town', beds: 2, guests: 4, size: 120, available: true, amenities: ['WiFi', 'TV', 'Air Conditioning', 'Mini Bar', 'Ocean View'], image: luxuryPenthouse, rating: 5 },
+  { id: 2, name: 'Executive Suite', type: 'Deluxe', price: 4000, location: 'Johannesburg', beds: 1, guests: 2, size: 75, available: true, amenities: ['WiFi', 'TV', 'Air Conditioning', 'Work Desk'], image: executiveBusiness, rating: 4.6 },
+  { id: 3, name: 'Standard Room', type: 'Standard', price: 1200, location: 'Durban', beds: 1, guests: 2, size: 40, available: true, amenities: ['WiFi', 'TV'], image: deluxeOcean, rating: 4.2 },
+  { id: 4, name: 'Deluxe Ocean View', type: 'Deluxe', price: 5000, location: 'Durban', beds: 1, guests: 2, size: 85, available: false, amenities: ['WiFi', 'TV', 'Air Conditioning', 'Balcony', 'Ocean View'], image: deluxeOcean, rating: 4.9 },
 ];
 
 const amenitiesList = ['WiFi', 'TV', 'Air Conditioning', 'Mini Bar', 'Ocean View', 'Balcony', 'Work Desk', 'Kitchen', 'Washing Machine', 'Pool Access'];
@@ -104,6 +107,8 @@ export function AdminInventory() {
         size: parseInt(formData.size),
         available: formData.available,
         amenities: formData.amenities,
+        image: luxuryPenthouse, // Default image for new rooms
+        rating: 4.5, // Default rating for new rooms
       };
       setRooms([...rooms, newRoom]);
       toast.success('Room added successfully');
@@ -123,6 +128,21 @@ export function AdminInventory() {
         ? formData.amenities.filter(a => a !== amenity)
         : [...formData.amenities, amenity],
     });
+  };
+
+  const getBadgeColor = (type: string) => {
+    switch (type) {
+      case 'Premium':
+        return 'bg-[#00CD07]';
+      case 'Deluxe':
+        return 'bg-[#00CD07]';
+      case 'Business':
+        return 'bg-[#00CD07]';
+      case 'Standard':
+        return 'bg-[#00CD07]';
+      default:
+        return 'bg-[#0F51AF]';
+    }
   };
 
   return (
@@ -161,33 +181,33 @@ export function AdminInventory() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <Card className="bg-gray-light border-0">
+        <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-lg">
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center gap-3 sm:gap-4">
-              <Hotel className="h-5 w-5 sm:h-6 sm:w-6 text-blue-primary" />
-              <div>
+              <Hotel className="h-5 w-5 sm:h-6 sm:w-6 text-blue-primary flex-shrink-0" />
+              <div className="min-w-0">
                 <p className="text-xs sm:text-sm text-gray-text">Total Rooms</p>
                 <p className="text-xl sm:text-2xl font-bold text-black">{rooms.length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gray-light border-0">
+        <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-lg">
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center gap-3 sm:gap-4">
-              <Hotel className="h-5 w-5 sm:h-6 sm:w-6 text-blue-primary" />
-              <div>
+              <Hotel className="h-5 w-5 sm:h-6 sm:w-6 text-blue-primary flex-shrink-0" />
+              <div className="min-w-0">
                 <p className="text-xs sm:text-sm text-gray-text">Available</p>
                 <p className="text-xl sm:text-2xl font-bold text-black">{rooms.filter(r => r.available).length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gray-light border-0">
+        <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-lg">
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center gap-3 sm:gap-4">
-              <DollarSign className="h-5 w-5 sm:h-6 sm:w-6 text-blue-primary" />
-              <div>
+              <DollarSign className="h-5 w-5 sm:h-6 sm:w-6 text-blue-primary flex-shrink-0" />
+              <div className="min-w-0">
                 <p className="text-xs sm:text-sm text-gray-text">Avg Price</p>
                 <p className="text-xl sm:text-2xl font-bold text-black">
                   R {Math.round(rooms.reduce((sum, r) => sum + r.price, 0) / rooms.length).toLocaleString()}
@@ -196,11 +216,11 @@ export function AdminInventory() {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gray-light border-0">
+        <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-lg">
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center gap-3 sm:gap-4">
-              <Hotel className="h-5 w-5 sm:h-6 sm:w-6 text-orange-500" />
-              <div>
+              <Hotel className="h-5 w-5 sm:h-6 sm:w-6 text-orange-500 flex-shrink-0" />
+              <div className="min-w-0">
                 <p className="text-xs sm:text-sm text-gray-text">Unavailable</p>
                 <p className="text-xl sm:text-2xl font-bold text-black">{rooms.filter(r => !r.available).length}</p>
               </div>
@@ -210,74 +230,107 @@ export function AdminInventory() {
       </div>
 
       {/* Rooms Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
         {rooms.map((room) => (
-          <Card key={room.id} className="bg-gray-light border-0">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="text-base sm:text-lg text-black">{room.name}</CardTitle>
-                  <p className="text-xs sm:text-sm text-gray-text mt-1">{room.location}</p>
-                </div>
-                <Badge
-                  className={room.available ? 'bg-blue-primary text-white' : 'bg-red-500 text-white'}
-                >
-                  {room.available ? 'Available' : 'Unavailable'}
-                </Badge>
+          <div key={room.id} className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+            {/* Room Image */}
+            <div className="relative h-48">
+              <img src={room.image} alt={room.name} className="w-full h-full object-cover" />
+              
+              {/* Type Badge */}
+              <div className={`absolute top-3 left-3 ${getBadgeColor(room.type)} text-white px-3 py-1 rounded-lg text-xs font-semibold uppercase`}>
+                {room.type}
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div>
-                  <p className="text-gray-text">Type</p>
-                  <p className="text-black font-medium">{room.type}</p>
+
+              {/* Rating */}
+              <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg flex items-center gap-1">
+                <svg className="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                </svg>
+                <span className="text-gray-900 font-semibold text-sm">{room.rating}</span>
+              </div>
+
+              {/* Availability Status */}
+              <div className={`absolute bottom-3 right-3 ${room.available ? 'bg-blue-primary' : 'bg-red-500'} text-white px-3 py-1 rounded-lg text-xs font-semibold`}>
+                {room.available ? 'Available' : 'Unavailable'}
+              </div>
+            </div>
+
+            {/* Room Details */}
+            <div className="p-4">
+              <h3 className="text-gray-900 text-lg font-bold mb-1">{room.name}</h3>
+              <div className="flex items-center gap-1 text-gray-600 text-sm mb-3">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                </svg>
+                {room.location}
+              </div>
+
+              {/* Room Features */}
+              <div className="flex items-center gap-4 mb-3 text-gray-600 text-sm">
+                <div className="flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-8v7H3V5H1v15h2v-3h18v3h2v-9c0-2.21-1.79-4-4-4z"/>
+                  </svg>
+                  {room.beds}
                 </div>
-                <div>
-                  <p className="text-gray-text">Price/Night</p>
-                  <p className="text-black font-medium">R {room.price.toLocaleString()}</p>
+                <div className="flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M21 10h-2V4.5C19 3.12 17.88 2 16.5 2S14 3.12 14 4.5V6H9V4.5C9 3.12 7.88 2 6.5 2S4 3.12 4 4.5V10H2v2h2v10h16V12h2v-2zM6 4.5c0-.28.22-.5.5-.5s.5.22.5.5V10H6V4.5zm10 0c0-.28.22-.5.5-.5s.5.22.5.5V10h-1V4.5zM6 20v-8h12v8H6z"/>
+                  </svg>
+                  {room.guests}
                 </div>
-                <div>
-                  <p className="text-gray-text">Beds</p>
-                  <p className="text-black font-medium">{room.beds}</p>
-                </div>
-                <div>
-                  <p className="text-gray-text">Max Guests</p>
-                  <p className="text-black font-medium">{room.guests}</p>
-                </div>
-                <div className="col-span-2">
-                  <p className="text-gray-text">Size</p>
-                  <p className="text-black font-medium">{room.size}m²</p>
+                <div className="flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-8 14H9v-2h2v2zm0-4H9v-2h2v2zm0-4H9V7h2v2zm4 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V7h2v2z"/>
+                  </svg>
+                  {room.size}m²
                 </div>
               </div>
-              <div>
-                <p className="text-xs sm:text-sm text-gray-text mb-2">Amenities:</p>
-                <div className="flex flex-wrap gap-1">
-                  {room.amenities.map((amenity, index) => (
-                    <Badge key={index} variant="outline" className="border-blue-primary text-blue-primary text-xs">
+
+              {/* Amenities */}
+              <div className="mb-4">
+                <p className="text-xs text-gray-500 mb-2">Amenities:</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {room.amenities.slice(0, 3).map((amenity, index) => (
+                    <span key={index} className="text-xs bg-blue-50 text-blue-primary px-2 py-1 rounded border border-blue-primary">
                       {amenity}
-                    </Badge>
+                    </span>
                   ))}
+                  {room.amenities.length > 3 && (
+                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                      +{room.amenities.length - 3} more
+                    </span>
+                  )}
                 </div>
               </div>
-              <div className="flex gap-2 pt-2">
+
+              {/* Price and Actions */}
+              <div className="flex items-center justify-between pt-3 border-t">
+                <div>
+                  <span className="text-gray-900 text-2xl font-bold">R{room.price.toLocaleString()}</span>
+                  <span className="text-gray-500 text-sm ml-1">per night</span>
+                </div>
+              </div>
+
+              {/* Admin Action Buttons */}
+              <div className="flex gap-2 mt-3">
                 <Button
-                  size="sm"
                   onClick={() => handleOpenDialog(room)}
-                  className="bg-blue-primary hover:bg-blue-primary/90 text-white flex-1"
+                  className="bg-blue-primary hover:bg-blue-primary/90 text-white flex-1 h-10"
                 >
-                  <Edit2 className="h-4 w-4 mr-1" />
+                  <Edit2 className="h-4 w-4 mr-2" />
                   Edit
                 </Button>
                 <Button
-                  size="sm"
                   onClick={() => handleDeleteRoom(room.id)}
-                  className="bg-red-500 hover:bg-red-600 text-white"
+                  className="bg-red-500 hover:bg-red-600 text-white h-10 px-4"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         ))}
       </div>
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Filter, Edit2, Eye, MoreVertical } from 'lucide-react';
+import { Search, Edit2, MoreVertical } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';

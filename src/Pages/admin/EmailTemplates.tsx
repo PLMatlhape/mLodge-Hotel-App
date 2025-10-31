@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Mail, Edit2, Eye, Send } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { Input } from '../../components/ui/input';
@@ -198,7 +198,7 @@ export function AdminEmailTemplates() {
       </div>
 
       {/* Templates by Category */}
-      <Tabs defaultValue={categories[0]} className="w-full">
+      <Tabs defaultValue={categories[0]}>
         <TabsList className="bg-gray-light border-gray-300">
           {categories.map(category => (
             <TabsTrigger key={category} value={category} className="text-black data-[state=active]:bg-blue-primary data-[state=active]:text-white">
@@ -224,7 +224,7 @@ export function AdminEmailTemplates() {
                       </p>
                       <div className="flex flex-wrap gap-1">
                         {template.variables.map((variable, index) => (
-                          <Badge key={index} variant="outline" className="border-blue-primary text-blue-primary text-xs">
+                          <Badge key={index} className="border border-blue-primary text-blue-primary text-xs">
                             {`{${variable}}`}
                           </Badge>
                         ))}
@@ -284,7 +284,7 @@ export function AdminEmailTemplates() {
               <p className="text-xs sm:text-sm text-gray-text mb-2">Available Variables:</p>
               <div className="flex flex-wrap gap-2">
                 {selectedTemplate?.variables.map((variable, index) => (
-                  <Badge key={index} variant="outline" className="border-blue-primary text-blue-primary">
+                  <Badge key={index} className="border border-blue-primary text-blue-primary">
                     {`{${variable}}`}
                   </Badge>
                 ))}

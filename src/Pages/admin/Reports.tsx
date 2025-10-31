@@ -1,4 +1,5 @@
-import { Download, FileText, Calendar, TrendingUp } from 'lucide-react';
+import { Download, FileText } from 'lucide-react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
@@ -22,6 +23,10 @@ const monthlyReports = [
 ];
 
 export function AdminReports() {
+  const [reportType, setReportType] = useState('bookings');
+  const [timePeriod, setTimePeriod] = useState('month');
+  const [format, setFormat] = useState('pdf');
+
   const handleDownloadReport = (month: string) => {
     toast.success(`Downloading report for ${month}`);
   };
@@ -91,7 +96,7 @@ export function AdminReports() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <Select>
+            <Select value={reportType} onValueChange={setReportType}>
               <SelectTrigger className="bg-white border-gray-text/20 text-black text-sm">
                 <SelectValue placeholder="Report Type" />
               </SelectTrigger>
@@ -102,7 +107,7 @@ export function AdminReports() {
                 <SelectItem value="guest" className="text-black">Guest Report</SelectItem>
               </SelectContent>
             </Select>
-            <Select>
+            <Select value={timePeriod} onValueChange={setTimePeriod}>
               <SelectTrigger className="bg-white border-gray-text/20 text-black text-sm">
                 <SelectValue placeholder="Time Period" />
               </SelectTrigger>
@@ -113,7 +118,7 @@ export function AdminReports() {
                 <SelectItem value="year" className="text-black">Last Year</SelectItem>
               </SelectContent>
             </Select>
-            <Select>
+            <Select value={format} onValueChange={setFormat}>
               <SelectTrigger className="bg-white border-gray-text/20 text-black text-sm">
                 <SelectValue placeholder="Format" />
               </SelectTrigger>
