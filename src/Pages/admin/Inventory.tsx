@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Plus, Edit2, Trash2, Hotel, DollarSign } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Edit2, Trash2, Hotel, DollarSign, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
@@ -8,26 +8,18 @@ import { Label } from '../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Switch } from '../../components/ui/switch';
 import { toast } from '../../lib/toast';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { fetchAccommodations, createRoom, updateRoomAsync, deleteRoomAsync } from '../../store/slices/roomsSlice';
 import backgroundImage from '../../assets/image/background/Offers-section.jpeg';
-
-// Room Images
-import luxuryPenthouse from '../../assets/image/dashboard/penthouse-room.jpeg';
-import deluxeOcean from '../../assets/image/dashboard/Deluxe Ocean View.jpeg';
-import executiveBusiness from '../../assets/image/dashboard/Executive-business-room.jpeg';
-
-const mockRooms = [
-  { id: 1, name: 'Luxury Penthouse', type: 'Premium', price: 8000, location: 'Cape Town', beds: 2, guests: 4, size: 120, available: true, amenities: ['WiFi', 'TV', 'Air Conditioning', 'Mini Bar', 'Ocean View'], image: luxuryPenthouse, images: [luxuryPenthouse, deluxeOcean, executiveBusiness], rating: 5, baths: 2 },
-  { id: 2, name: 'Executive Suite', type: 'Deluxe', price: 4000, location: 'Johannesburg', beds: 1, guests: 2, size: 75, available: true, amenities: ['WiFi', 'TV', 'Air Conditioning', 'Work Desk'], image: executiveBusiness, images: [executiveBusiness, luxuryPenthouse, deluxeOcean], rating: 4.6, baths: 1 },
-  { id: 3, name: 'Standard Room', type: 'Standard', price: 1200, location: 'Durban', beds: 1, guests: 2, size: 40, available: true, amenities: ['WiFi', 'TV'], image: deluxeOcean, images: [deluxeOcean, executiveBusiness, luxuryPenthouse], rating: 4.2, baths: 1 },
-  { id: 4, name: 'Deluxe Ocean View', type: 'Deluxe', price: 5000, location: 'Durban', beds: 1, guests: 2, size: 85, available: false, amenities: ['WiFi', 'TV', 'Air Conditioning', 'Balcony', 'Ocean View'], image: deluxeOcean, images: [deluxeOcean, luxuryPenthouse, executiveBusiness], rating: 4.9, baths: 1 },
-];
 
 const amenitiesList = ['WiFi', 'TV', 'Air Conditioning', 'Mini Bar', 'Ocean View', 'Balcony', 'Work Desk', 'Kitchen', 'Washing Machine', 'Pool Access'];
 
 export function AdminInventory() {
-  const [rooms, setRooms] = useState(mockRooms);
+  const dispatch = useAppDispatch();
+  const { rooms, loading, error } = useAppSelector((state) => state.rooms);
+  
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingRoom, setEditingRoom] = useState<typeof mockRooms[0] | null>(null);
+  const [editingRoom, setEditingRoom] = useState<any | null>(null);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     name: '',
@@ -44,24 +36,29 @@ export function AdminInventory() {
     images: [] as string[],
   });
 
-  const handleOpenDialog = (room?: typeof mockRooms[0]) => {
+  // Fetch accommodations/rooms on component mount
+  useEffect(() => {
+    dispatch(fetchAccommodations({ limit: 100 }));
+  }, [dispatch]);
+
+  const handleOpenDialog = (room?: any) => {
     if (room) {
       setEditingRoom(room);
       setFormData({
         name: room.name,
-        type: room.type,
-        price: room.price.toString(),
-        location: room.location,
-        beds: room.beds.toString(),
-        baths: room.baths.toString(),
-        guests: room.guests.toString(),
-        size: room.size.toString(),
-        rating: room.rating.toString(),
-        available: room.available,
-        amenities: room.amenities,
-        images: room.images || [room.image],
+        type: room.type || 'Standard',
+        price: room.price_per_night?.toString() || room.price?.toString() || '',
+        location: room.location || room.city || 'Cape Town',
+        beds: room.beds?.toString() || '1',
+        baths: room.baths?.toString() || '1',
+        guests: room.capacity?.toString() || room.guests?.toString() || '2',
+        size: room.size?.toString() || '',
+        rating: room.rating?.toString() || '4.5',
+        available: room.available !== undefined ? room.available : true,
+        amenities: room.amenities || [],
+        images: room.images || (room.image ? [room.image] : []),
       });
-      setImagePreviews(room.images || [room.image]);
+      setImagePreviews(room.images || (room.image ? [room.image] : []));
     } else {
       setEditingRoom(null);
       setFormData({
@@ -83,7 +80,7 @@ export function AdminInventory() {
     setIsDialogOpen(true);
   };
 
-  const handleSaveRoom = () => {
+  const handleSaveRoom = async () => {
     if (!formData.name || !formData.price || !formData.size) {
       toast.error('Please fill in all required fields');
       return;
@@ -94,54 +91,87 @@ export function AdminInventory() {
       return;
     }
 
-    if (editingRoom) {
-      setRooms(rooms.map(r => 
-        r.id === editingRoom.id 
-          ? { 
-              ...r, 
-              name: formData.name,
-              type: formData.type,
-              price: parseInt(formData.price),
-              location: formData.location,
-              beds: parseInt(formData.beds),
-              baths: parseInt(formData.baths),
-              guests: parseInt(formData.guests),
-              size: parseInt(formData.size),
-              rating: parseFloat(formData.rating),
-              available: formData.available,
-              amenities: formData.amenities,
-              image: formData.images[0],
-              images: formData.images,
-            } 
-          : r
-      ));
-      toast.success('Room updated successfully');
-    } else {
-      const newRoom = {
-        id: Math.max(...rooms.map(r => r.id)) + 1,
-        name: formData.name,
-        type: formData.type,
-        price: parseInt(formData.price),
-        location: formData.location,
-        beds: parseInt(formData.beds),
-        baths: parseInt(formData.baths),
-        guests: parseInt(formData.guests),
-        size: parseInt(formData.size),
-        rating: parseFloat(formData.rating),
-        available: formData.available,
-        amenities: formData.amenities,
-        image: formData.images[0],
-        images: formData.images,
-      };
-      setRooms([...rooms, newRoom]);
-      toast.success('Room added successfully');
+    // Backend expects these exact field names
+    const roomData = {
+      accommodation_id: 1, // TODO: Get actual accommodation ID or make this selectable
+      name: formData.name,
+      description: `${formData.type} room in ${formData.location}`, // Generate description
+      capacity: parseInt(formData.guests),
+      beds: parseInt(formData.beds),
+      price_per_night: parseInt(formData.price),
+      refundable: true,
+      // Additional fields for frontend display (not in backend schema but might be needed)
+      type: formData.type,
+      location: formData.location,
+      baths: parseInt(formData.baths),
+      area: parseInt(formData.size),
+      rating: parseFloat(formData.rating),
+      available: formData.available,
+      amenities: formData.amenities,
+      image: formData.images[0],
+      images: formData.images,
+    };
+
+    try {
+      if (editingRoom) {
+        await dispatch(updateRoomAsync({ id: editingRoom.id, data: roomData })).unwrap();
+        toast.success('Room updated successfully');
+      } else {
+        await dispatch(createRoom(roomData)).unwrap();
+        toast.success('Room added successfully');
+      }
+      setIsDialogOpen(false);
+      // Refresh rooms list
+      dispatch(fetchAccommodations({ limit: 100 }));
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { error?: string }; status?: number }; message?: string };
+      let errorMessage = editingRoom ? 'Failed to update room' : 'Failed to create room';
+      
+      if (err.response?.status === 403) {
+        errorMessage = 'Access denied. Please log in as admin.';
+      } else if (err.response?.status === 401) {
+        errorMessage = 'Session expired. Please log in again.';
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      toast.error(errorMessage);
+      console.error('Save room error:', error);
     }
-    setIsDialogOpen(false);
   };
 
-  const handleDeleteRoom = (roomId: number) => {
-    setRooms(rooms.filter(r => r.id !== roomId));
-    toast.success('Room deleted successfully');
+  const handleDeleteRoom = async (roomId: number) => {
+    // Add confirmation dialog
+    if (!window.confirm('Are you sure you want to delete this room? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await dispatch(deleteRoomAsync(roomId)).unwrap();
+      toast.success('Room deleted successfully');
+      // Refresh rooms list
+      dispatch(fetchAccommodations({ limit: 100 }));
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { error?: string }; status?: number }; message?: string };
+      let errorMessage = 'Failed to delete room';
+      
+      if (err.response?.status === 403) {
+        errorMessage = 'Access denied. Please log in as admin.';
+      } else if (err.response?.status === 401) {
+        errorMessage = 'Session expired. Please log in again.';
+      } else if (err.response?.status === 409) {
+        errorMessage = 'Cannot delete room with existing bookings';
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      toast.error(errorMessage);
+      console.error('Delete room error:', error);
+    }
   };
 
   const toggleAmenity = (amenity: string) => {
@@ -175,15 +205,42 @@ export function AdminInventory() {
 
       const reader = new FileReader();
       reader.onloadend = () => {
-        const imageUrl = reader.result as string;
-        newImages.push(imageUrl);
-        filesProcessed++;
+        const img = new Image();
+        img.onload = () => {
+          // Compress image to max 800x600 and 80% quality
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          // Calculate new dimensions (max 800x600)
+          const maxWidth = 800;
+          const maxHeight = 600;
+          
+          if (width > maxWidth || height > maxHeight) {
+            const ratio = Math.min(maxWidth / width, maxHeight / height);
+            width = width * ratio;
+            height = height * ratio;
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          // Convert to base64 with 80% quality
+          const compressedImage = canvas.toDataURL('image/jpeg', 0.8);
+          newImages.push(compressedImage);
+          filesProcessed++;
 
-        if (filesProcessed === files.length) {
-          const updatedImages = [...formData.images, ...newImages];
-          setFormData({ ...formData, images: updatedImages });
-          setImagePreviews(updatedImages);
-        }
+          if (filesProcessed === files.length) {
+            const updatedImages = [...formData.images, ...newImages];
+            setFormData({ ...formData, images: updatedImages });
+            setImagePreviews(updatedImages);
+            toast.success(`${newImages.length} image(s) uploaded and compressed`);
+          }
+        };
+        img.src = reader.result as string;
       };
       reader.readAsDataURL(file);
     });
@@ -300,7 +357,7 @@ export function AdminInventory() {
           <div key={room.id} className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
             {/* Room Image */}
             <div className="relative h-48">
-              <img src={room.image} alt={room.name} className="w-full h-full object-cover" />
+              <img src={room.image || '/placeholder-room.jpg'} alt={room.name} className="w-full h-full object-cover" />
               
               {/* Type Badge */}
               <div className={`absolute top-3 left-3 ${getBadgeColor(room.type)} text-white px-3 py-1 rounded-lg text-xs font-semibold uppercase`}>
@@ -355,7 +412,7 @@ export function AdminInventory() {
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-8 14H9v-2h2v2zm0-4H9v-2h2v2zm0-4H9V7h2v2zm4 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V7h2v2z"/>
                   </svg>
-                  {room.size}m²
+                  {room.area || room.size || 'N/A'}m²
                 </div>
               </div>
 
@@ -363,15 +420,21 @@ export function AdminInventory() {
               <div className="mb-4">
                 <p className="text-xs text-gray-500 mb-2">Amenities:</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {room.amenities.slice(0, 3).map((amenity, index) => (
-                    <span key={index} className="text-xs bg-blue-50 text-blue-primary px-2 py-1 rounded border border-blue-primary">
-                      {amenity}
-                    </span>
-                  ))}
-                  {room.amenities.length > 3 && (
-                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                      +{room.amenities.length - 3} more
-                    </span>
+                  {room.amenities && room.amenities.length > 0 ? (
+                    <>
+                      {room.amenities.slice(0, 3).map((amenity, index) => (
+                        <span key={index} className="text-xs bg-blue-50 text-blue-primary px-2 py-1 rounded border border-blue-primary">
+                          {amenity}
+                        </span>
+                      ))}
+                      {room.amenities.length > 3 && (
+                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                          +{room.amenities.length - 3} more
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-xs text-gray-400">No amenities listed</span>
                   )}
                 </div>
               </div>

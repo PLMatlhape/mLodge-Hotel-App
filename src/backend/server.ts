@@ -5,25 +5,22 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 
 // Import routes
-import * as authRoutesModule from './routes/auth';
-import * as accommodationsRoutesModule from './routes/accommodations';
-import * as roomsRoutesModule from './routes/rooms';
-import * as bookingsRoutesModule from './routes/bookings';
-import * as reviewsRoutesModule from './routes/reviews';
-import * as amenitiesRoutesModule from './routes/amenities';
-import * as favouritesRoutesModule from './routes/favourites';
-import * as usersRoutesModule from './routes/users';
-import * as adminRoutesModule from './routes/admin';
-
-const authRoutes = (authRoutesModule as any).default || authRoutesModule;
-const accommodationsRoutes = (accommodationsRoutesModule as any).default || accommodationsRoutesModule;
-const roomsRoutes = (roomsRoutesModule as any).default || roomsRoutesModule;
-const bookingsRoutes = (bookingsRoutesModule as any).default || bookingsRoutesModule;
-const reviewsRoutes = (reviewsRoutesModule as any).default || reviewsRoutesModule;
-const amenitiesRoutes = (amenitiesRoutesModule as any).default || amenitiesRoutesModule;
-const favouritesRoutes = (favouritesRoutesModule as any).default || favouritesRoutesModule;
-const usersRoutes = (usersRoutesModule as any).default || usersRoutesModule;
-const adminRoutes = (adminRoutesModule as any).default || adminRoutesModule;
+import authRoutes from './routes/auth';
+import accommodationsRoutes from './routes/accommodations';
+import roomsRoutes from './routes/rooms';
+import bookingsRoutes from './routes/bookings';
+import reviewsRoutes from './routes/reviews';
+import amenitiesRoutes from './routes/amenities';
+import favouritesRoutes from './routes/favourites';
+import usersRoutes from './routes/users';
+import adminRoutes from './routes/admin';
+import staffRoutes from './routes/staff';
+import promoCodesRoutes from './routes/promoCodes';
+import refundsRoutes from './routes/refunds';
+import inquiriesRoutes from './routes/inquiries';
+import emailTemplatesRoutes from './routes/emailTemplates';
+import reportsRoutes from './routes/reports';
+import analyticsRoutes from './routes/analytics';
 
 dotenv.config();
 
@@ -46,9 +43,9 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// Body parsing middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Body parsing middleware with increased limit for image uploads
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Health check endpoint
 app.get('/api/health', (_req: Request, res: Response) => {
@@ -69,6 +66,13 @@ app.use('/api/reviews', reviewsRoutes);
 app.use('/api/amenities', amenitiesRoutes);
 app.use('/api/favourites', favouritesRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin/staff', staffRoutes);
+app.use('/api/admin/promo-codes', promoCodesRoutes);
+app.use('/api/admin/refunds', refundsRoutes);
+app.use('/api/admin/inquiries', inquiriesRoutes);
+app.use('/api/admin/email-templates', emailTemplatesRoutes);
+app.use('/api/admin/reports', reportsRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Error handling middleware
 interface ErrorWithStatus extends Error {
@@ -93,6 +97,21 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 API available at http://localhost:${PORT}/api`);
+}).on('error', (err: Error) => {
+  console.error('❌ Server error:', err);
+  process.exit(1);
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err: Error) => {
+  console.error('❌ Uncaught Exception:', err);
+  process.exit(1);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
 });
 
 export default app;

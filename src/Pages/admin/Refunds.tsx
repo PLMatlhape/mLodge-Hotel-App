@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Search, CheckCircle, XCircle, Clock, DollarSign } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, CheckCircle, XCircle, Clock, DollarSign, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
@@ -9,42 +9,25 @@ import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
 import { Badge } from '../../components/ui/badge';
 import { toast } from '../../lib/toast';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import {
+  fetchAllRefunds,
+  approveRefund,
+  rejectRefund,
+  processRefund,
+  type Refund
+} from '../../store/slices/refundsSlice';
 import backgroundImage from '../../assets/image/background/Offers-section.jpeg';
 
-type RefundStatus = 'Pending' | 'Approved' | 'Processed' | 'Rejected';
-
-interface Refund {
-  id: string;
-  bookingId: string;
-  guest: string;
-  amount: number;
-  requestDate: string;
-  reason: string;
-  status: RefundStatus;
-  email: string;
-  approvedDate?: string;
-  processedDate?: string;
-  rejectedDate?: string;
-  rejectionReason?: string;
-}
-
-const mockRefunds: Refund[] = [
-  { id: 'RF-2025-001', bookingId: 'BK-2025-1228', guest: 'Robert Wilson', amount: 9600, requestDate: '2025-10-18', reason: 'Personal emergency', status: 'Pending', email: 'robert@example.com' },
-  { id: 'RF-2025-002', bookingId: 'BK-2025-1225', guest: 'Anna Taylor', amount: 5000, requestDate: '2025-10-17', reason: 'Flight cancelled', status: 'Approved', email: 'anna@example.com', approvedDate: '2025-10-18' },
-  { id: 'RF-2025-003', bookingId: 'BK-2025-1222', guest: 'Chris Martin', amount: 2400, requestDate: '2025-10-16', reason: 'Overbooked', status: 'Processed', email: 'chris@example.com', processedDate: '2025-10-17' },
-  { id: 'RF-2025-004', bookingId: 'BK-2025-1220', guest: 'Diana Prince', amount: 8000, requestDate: '2025-10-15', reason: 'Medical reasons', status: 'Rejected', email: 'diana@example.com', rejectedDate: '2025-10-16', rejectionReason: 'Outside refund policy window' },
-  { id: 'RF-2025-005', bookingId: 'BK-2025-1218', guest: 'Tom Hardy', amount: 1600, requestDate: '2025-10-14', reason: 'Change of plans', status: 'Pending', email: 'tom@example.com' },
-];
-
-const statsData = [
-  { label: 'Pending', value: '2', icon: Clock, color: '#ffa500' },
-  { label: 'Approved', value: '1', icon: CheckCircle, color: '#0F51AF' },
-  { label: 'Processed', value: '1', icon: DollarSign, color: '#00bfff' },
-  { label: 'Rejected', value: '1', icon: XCircle, color: '#ff4444' },
-];
-
 export function AdminRefunds() {
-  const [refunds, setRefunds] = useState<Refund[]>(mockRefunds);
+  const dispatch = useAppDispatch();
+  const { refunds, loading, error } = useAppSelector((state) => state.refunds);
+
+  // Fetch refunds on mount
+  useEffect(() => {
+    dispatch(fetchAllRefunds({ page: 1, limit: 100 }));
+  }, [dispatch]);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedRefund, setSelectedRefund] = useState<Refund | null>(null);
@@ -53,42 +36,59 @@ export function AdminRefunds() {
 
   const filteredRefunds = refunds.filter(refund => {
     const matchesSearch = 
-      refund.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      refund.bookingId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      refund.guest.toLowerCase().includes(searchTerm.toLowerCase());
+      refund.id.toString().includes(searchTerm.toLowerCase()) ||
+      refund.booking_reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      refund.guest_name.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = filterStatus === 'all' || refund.status === filterStatus;
 
     return matchesSearch && matchesStatus;
   });
 
-  const handleApprove = (refundId: string) => {
-    setRefunds(refunds.map(r => 
-      r.id === refundId ? { ...r, status: 'Approved', approvedDate: new Date().toISOString().split('T')[0] } : r
-    ));
-    toast.success('Refund approved successfully');
-    setIsDialogOpen(false);
+  const handleApprove = async (refundId: number) => {
+    try {
+      await dispatch(approveRefund({ id: refundId, adminNotes })).unwrap();
+      toast.success('Refund approved successfully');
+      setIsDialogOpen(false);
+      setAdminNotes('');
+      // Refresh refunds list
+      dispatch(fetchAllRefunds({ page: 1, limit: 100 }));
+    } catch (err) {
+      toast.error('Failed to approve refund');
+      console.error('Error approving refund:', err);
+    }
   };
 
-  const handleReject = (refundId: string) => {
+  const handleReject = async (refundId: number) => {
     if (!adminNotes) {
       toast.error('Please provide a reason for rejection');
       return;
     }
-    setRefunds(refunds.map(r => 
-      r.id === refundId ? { ...r, status: 'Rejected', rejectedDate: new Date().toISOString().split('T')[0], rejectionReason: adminNotes } : r
-    ));
-    toast.success('Refund rejected');
-    setIsDialogOpen(false);
-    setAdminNotes('');
+    try {
+      await dispatch(rejectRefund({ id: refundId, rejectionReason: adminNotes })).unwrap();
+      toast.success('Refund rejected');
+      setIsDialogOpen(false);
+      setAdminNotes('');
+      // Refresh refunds list
+      dispatch(fetchAllRefunds({ page: 1, limit: 100 }));
+    } catch (err) {
+      toast.error('Failed to reject refund');
+      console.error('Error rejecting refund:', err);
+    }
   };
 
-  const handleProcess = (refundId: string) => {
-    setRefunds(refunds.map(r => 
-      r.id === refundId ? { ...r, status: 'Processed', processedDate: new Date().toISOString().split('T')[0] } : r
-    ));
-    toast.success('Refund processed successfully');
-    setIsDialogOpen(false);
+  const handleProcess = async (refundId: number) => {
+    try {
+      await dispatch(processRefund({ id: refundId, adminNotes })).unwrap();
+      toast.success('Refund processed successfully');
+      setIsDialogOpen(false);
+      setAdminNotes('');
+      // Refresh refunds list
+      dispatch(fetchAllRefunds({ page: 1, limit: 100 }));
+    } catch (err) {
+      toast.error('Failed to process refund');
+      console.error('Error processing refund:', err);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -99,6 +99,13 @@ export function AdminRefunds() {
       case 'Rejected': return { bg: '#ff4444', text: '#ffffff' };
       default: return { bg: '#666', text: '#ffffff' };
     }
+  };
+
+  const statsCount = {
+    pending: refunds.filter(r => r.status === 'Pending').length,
+    approved: refunds.filter(r => r.status === 'Approved').length,
+    processed: refunds.filter(r => r.status === 'Processed').length,
+    rejected: refunds.filter(r => r.status === 'Rejected').length,
   };
 
   return (
@@ -126,26 +133,84 @@ export function AdminRefunds() {
         <p className="text-sm sm:text-base text-white">Monitor and manage refund requests</p>
       </div>
 
+      {/* Loading State */}
+      {loading && (
+        <Card className="bg-gray-light border-0">
+          <CardContent className="p-6 text-center">
+            <div className="flex items-center justify-center gap-2">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-primary"></div>
+              <p className="text-black">Loading refunds...</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <Card className="bg-red-100 border-red-300">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+              <p className="text-red-600">Error: {error}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {statsData.map((stat, index) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={index} className="bg-gray-light border-gray-text/20">
-              <CardContent className="p-4 sm:p-6">
-                <div className="flex items-center gap-3 sm:gap-4">
-                  <div className="p-2 sm:p-3 rounded-lg bg-white flex-shrink-0">
-                    <Icon className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: stat.color }} />
-                  </div>
-                  <div>
-                    <p className="text-gray-text text-xs sm:text-sm">{stat.label}</p>
-                    <p className="text-black text-xl sm:text-2xl font-bold">{stat.value}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+        <Card className="bg-gray-light border-gray-text/20">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="p-2 sm:p-3 rounded-lg bg-white flex-shrink-0">
+                <Clock className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: '#ffa500' }} />
+              </div>
+              <div>
+                <p className="text-gray-text text-xs sm:text-sm">Pending</p>
+                <p className="text-black text-xl sm:text-2xl font-bold">{statsCount.pending}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gray-light border-gray-text/20">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="p-2 sm:p-3 rounded-lg bg-white flex-shrink-0">
+                <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: '#0F51AF' }} />
+              </div>
+              <div>
+                <p className="text-gray-text text-xs sm:text-sm">Approved</p>
+                <p className="text-black text-xl sm:text-2xl font-bold">{statsCount.approved}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gray-light border-gray-text/20">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="p-2 sm:p-3 rounded-lg bg-white flex-shrink-0">
+                <DollarSign className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: '#00bfff' }} />
+              </div>
+              <div>
+                <p className="text-gray-text text-xs sm:text-sm">Processed</p>
+                <p className="text-black text-xl sm:text-2xl font-bold">{statsCount.processed}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gray-light border-gray-text/20">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="p-2 sm:p-3 rounded-lg bg-white flex-shrink-0">
+                <XCircle className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: '#ff4444' }} />
+              </div>
+              <div>
+                <p className="text-gray-text text-xs sm:text-sm">Rejected</p>
+                <p className="text-black text-xl sm:text-2xl font-bold">{statsCount.rejected}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filters */}
@@ -202,16 +267,18 @@ export function AdminRefunds() {
                   const statusColor = getStatusColor(refund.status);
                   return (
                     <tr key={refund.id} className="border-b border-gray-text/10 hover:bg-white/50 transition-colors">
-                      <td className="py-2 sm:py-3 px-3 sm:px-4 text-black text-xs sm:text-sm font-medium">{refund.id}</td>
-                      <td className="py-2 sm:py-3 px-3 sm:px-4 text-black text-xs sm:text-sm font-medium">{refund.bookingId}</td>
+                      <td className="py-2 sm:py-3 px-3 sm:px-4 text-black text-xs sm:text-sm font-medium">#{refund.id}</td>
+                      <td className="py-2 sm:py-3 px-3 sm:px-4 text-black text-xs sm:text-sm font-medium">{refund.booking_reference}</td>
                       <td className="py-2 sm:py-3 px-3 sm:px-4">
                         <div>
-                          <div className="text-black text-xs sm:text-sm font-medium">{refund.guest}</div>
-                          <div className="text-gray-text text-xs">{refund.email}</div>
+                          <div className="text-black text-xs sm:text-sm font-medium">{refund.guest_name}</div>
+                          <div className="text-gray-text text-xs">{refund.guest_email}</div>
                         </div>
                       </td>
                       <td className="py-2 sm:py-3 px-3 sm:px-4 text-black text-xs sm:text-sm font-medium">R {refund.amount.toLocaleString()}</td>
-                      <td className="py-2 sm:py-3 px-3 sm:px-4 text-gray-text text-xs sm:text-sm">{refund.requestDate}</td>
+                      <td className="py-2 sm:py-3 px-3 sm:px-4 text-gray-text text-xs sm:text-sm">
+                        {new Date(refund.requested_date).toLocaleDateString()}
+                      </td>
                       <td className="py-2 sm:py-3 px-3 sm:px-4 text-gray-text text-xs sm:text-sm">{refund.reason}</td>
                       <td className="py-2 sm:py-3 px-3 sm:px-4">
                         <Badge
@@ -256,15 +323,16 @@ export function AdminRefunds() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label className="text-gray-text text-sm">Refund ID</Label>
-                  <p className="text-black font-medium">{selectedRefund.id}</p>
+                  <p className="text-black font-medium">#{selectedRefund.id}</p>
                 </div>
                 <div>
-                  <Label className="text-gray-text text-sm">Booking ID</Label>
-                  <p className="text-black font-medium">{selectedRefund.bookingId}</p>
+                  <Label className="text-gray-text text-sm">Booking Reference</Label>
+                  <p className="text-black font-medium">{selectedRefund.booking_reference}</p>
                 </div>
                 <div>
                   <Label className="text-gray-text text-sm">Guest</Label>
-                  <p className="text-black font-medium">{selectedRefund.guest}</p>
+                  <p className="text-black font-medium">{selectedRefund.guest_name}</p>
+                  <p className="text-gray-text text-xs">{selectedRefund.guest_email}</p>
                 </div>
                 <div>
                   <Label className="text-gray-text text-sm">Amount</Label>
@@ -274,6 +342,20 @@ export function AdminRefunds() {
                   <Label className="text-gray-text text-sm">Reason</Label>
                   <p className="text-black">{selectedRefund.reason}</p>
                 </div>
+                <div>
+                  <Label className="text-gray-text text-sm">Requested Date</Label>
+                  <p className="text-black">{new Date(selectedRefund.requested_date).toLocaleDateString()}</p>
+                </div>
+                <div>
+                  <Label className="text-gray-text text-sm">Status</Label>
+                  <Badge className="capitalize">{selectedRefund.status}</Badge>
+                </div>
+                {selectedRefund.rejection_reason && (
+                  <div className="col-span-1 sm:col-span-2">
+                    <Label className="text-gray-text text-sm">Rejection Reason</Label>
+                    <p className="text-red-600">{selectedRefund.rejection_reason}</p>
+                  </div>
+                )}
               </div>
 
               {selectedRefund.status === 'Pending' && (
@@ -283,7 +365,7 @@ export function AdminRefunds() {
                     <Textarea
                       value={adminNotes}
                       onChange={(e) => setAdminNotes(e.target.value)}
-                      placeholder="Add notes for rejection reason (optional for approval)"
+                      placeholder="Add notes for rejection reason (required for rejection, optional for approval)"
                       className="min-h-24 bg-white border-gray-text/20 text-black mt-1"
                     />
                   </div>

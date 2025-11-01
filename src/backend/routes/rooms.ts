@@ -124,8 +124,7 @@ router.post('/', [
   body('capacity').isInt({ min: 1 }),
   body('beds').isInt({ min: 1 }),
   body('price_per_night').isFloat({ min: 0 }),
-  body('refundable').optional().isBoolean(),
-  body('quantity').optional().isInt({ min: 1 })
+  body('refundable').optional().isBoolean()
 ], async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
@@ -141,15 +140,14 @@ router.post('/', [
       capacity,
       beds,
       price_per_night,
-      refundable = true,
-      quantity = 1
+      refundable = true
     } = req.body;
 
     const result = await db.query(
-      `INSERT INTO rooms (accommodation_id, name, description, capacity, beds, price_per_night, refundable, quantity, is_active)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)
+      `INSERT INTO rooms (accommodation_id, name, description, capacity, beds, price_per_night, refundable)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [accommodation_id, name, description, capacity, beds, price_per_night, refundable, quantity]
+      [accommodation_id, name, description, capacity, beds, price_per_night, refundable]
     );
 
     res.status(201).json(result.rows[0]);
@@ -167,9 +165,7 @@ router.put('/:id', [
   body('capacity').optional().isInt({ min: 1 }),
   body('beds').optional().isInt({ min: 1 }),
   body('price_per_night').optional().isFloat({ min: 0 }),
-  body('refundable').optional().isBoolean(),
-  body('quantity').optional().isInt({ min: 1 }),
-  body('is_active').optional().isBoolean()
+  body('refundable').optional().isBoolean()
 ], async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
@@ -189,10 +185,8 @@ router.put('/:id', [
            beds = COALESCE($4, beds),
            price_per_night = COALESCE($5, price_per_night),
            refundable = COALESCE($6, refundable),
-           quantity = COALESCE($7, quantity),
-           is_active = COALESCE($8, is_active),
            updated_at = NOW()
-       WHERE id = $9
+       WHERE id = $7
        RETURNING *`,
       [
         updates.name,
@@ -201,8 +195,6 @@ router.put('/:id', [
         updates.beds,
         updates.price_per_night,
         updates.refundable,
-        updates.quantity,
-        updates.is_active,
         id
       ]
     );
@@ -224,16 +216,42 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req: AuthRequest, 
   try {
     const { id } = req.params;
 
-    const result = await db.query('DELETE FROM rooms WHERE id = $1 RETURNING id', [id]);
-
-    if (result.rows.length === 0) {
+    // Check if room exists
+    const checkResult = await db.query('SELECT id FROM rooms WHERE id = $1', [id]);
+    
+    if (checkResult.rows.length === 0) {
       res.status(404).json({ error: 'Room not found' });
       return;
     }
 
-    res.json({ message: 'Room deleted successfully' });
-  } catch (error) {
+    // Check for existing bookings
+    const bookingCheck = await db.query(
+      'SELECT COUNT(*) as count FROM booking_items WHERE room_id = $1',
+      [id]
+    );
+
+    if (parseInt(bookingCheck.rows[0].count) > 0) {
+      res.status(409).json({ 
+        error: 'Cannot delete room with existing bookings. Please cancel all bookings first.' 
+      });
+      return;
+    }
+
+    // Delete the room
+    await db.query('DELETE FROM rooms WHERE id = $1', [id]);
+
+    res.json({ message: 'Room deleted successfully', id: parseInt(id) });
+  } catch (error: any) {
     console.error('Error deleting room:', error);
+    
+    // Handle foreign key constraint errors
+    if (error.code === '23503') {
+      res.status(409).json({ 
+        error: 'Cannot delete room because it is referenced by other records' 
+      });
+      return;
+    }
+    
     res.status(500).json({ error: 'Failed to delete room' });
   }
 });

@@ -8,7 +8,7 @@ const router = express.Router();
 // Get user's favourites
 router.get('/', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const userId = req.user.id;
+    const userId = req.user!.id;
 
     const result = await db.query(
       `SELECT f.id as favourite_id,
@@ -48,7 +48,7 @@ router.post('/', [
     }
 
     const { accommodation_id } = req.body;
-    const userId = req.user.id;
+    const userId = req.user!.id;
 
     // Check if already favourited
     const existing = await db.query(
@@ -86,7 +86,7 @@ router.post('/', [
 router.delete('/:accommodationId', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { accommodationId } = req.params;
-    const userId = req.user.id;
+    const userId = req.user!.id;
 
     const result = await db.query(
       'DELETE FROM favourites WHERE user_id = $1 AND accommodation_id = $2 RETURNING *',
@@ -116,7 +116,7 @@ router.post('/toggle', [
     }
 
     const { accommodation_id } = req.body;
-    const userId = req.user.id;
+    const userId = req.user!.id;
 
     // Check if exists
     const existing = await db.query(
@@ -149,7 +149,7 @@ router.post('/toggle', [
 router.get('/check/:accommodationId', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { accommodationId } = req.params;
-    const userId = req.user.id;
+    const userId = req.user!.id;
 
     const result = await db.query(
       'SELECT id FROM favourites WHERE user_id = $1 AND accommodation_id = $2',

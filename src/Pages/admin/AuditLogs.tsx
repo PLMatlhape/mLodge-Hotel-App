@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Search, FileSearch, Download } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, FileSearch, Download, Loader2, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
@@ -7,42 +7,35 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from '../../components/ui/badge';
 import { toast } from '../../lib/toast';
 import backgroundImage from '../../assets/image/background/Offers-section.jpeg';
-
-const mockLogs = [
-  { id: 1, timestamp: '2025-10-19 14:35:22', user: 'admin@mlodge.com', action: 'Booking Updated', module: 'Bookings', details: 'Updated booking BK-2025-1234 status to Confirmed', ip: '192.168.1.100' },
-  { id: 2, timestamp: '2025-10-19 14:30:15', user: 'jane@mlodge.com', action: 'Refund Approved', module: 'Refunds', details: 'Approved refund RF-2025-002 for R5,000', ip: '192.168.1.105' },
-  { id: 3, timestamp: '2025-10-19 14:25:08', user: 'john@mlodge.com', action: 'Review Moderated', module: 'Reviews', details: 'Approved review RV-004 from Sarah Williams', ip: '192.168.1.108' },
-  { id: 4, timestamp: '2025-10-19 14:20:33', user: 'sarah@mlodge.com', action: 'Report Generated', module: 'Reports', details: 'Generated monthly revenue report for October 2025', ip: '192.168.1.110' },
-  { id: 5, timestamp: '2025-10-19 14:15:45', user: 'admin@mlodge.com', action: 'Room Updated', module: 'Inventory', details: 'Updated pricing for Luxury Penthouse from R7,500 to R8,000', ip: '192.168.1.100' },
-  { id: 6, timestamp: '2025-10-19 14:10:12', user: 'jane@mlodge.com', action: 'Promo Created', module: 'Promos', details: 'Created new promo code: WEEKEND15', ip: '192.168.1.105' },
-  { id: 7, timestamp: '2025-10-19 14:05:28', user: 'admin@mlodge.com', action: 'User Login', module: 'Authentication', details: 'Successful login from dashboard', ip: '192.168.1.100' },
-  { id: 8, timestamp: '2025-10-19 13:58:41', user: 'mike@mlodge.com', action: 'Inquiry Resolved', module: 'Inquiries', details: 'Marked inquiry INQ-003 as resolved', ip: '192.168.1.112' },
-  { id: 9, timestamp: '2025-10-19 13:50:15', user: 'admin@mlodge.com', action: 'Staff Updated', module: 'Staff', details: 'Updated permissions for john@mlodge.com', ip: '192.168.1.100' },
-  { id: 10, timestamp: '2025-10-19 13:45:33', user: 'sarah@mlodge.com', action: 'Booking Cancelled', module: 'Bookings', details: 'Cancelled booking BK-2025-1228 with full refund', ip: '192.168.1.110' },
-];
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { fetchAuditLogs, exportAuditLogs } from '../../store/slices/auditLogsSlice';
 
 const actionColors: { [key: string]: { bg: string; text: string } } = {
-  'Booking Updated': { bg: '#0F51AF', text: '#ffffff' },
-  'Booking Cancelled': { bg: '#ff4444', text: '#ffffff' },
-  'Refund Approved': { bg: '#0F51AF', text: '#ffffff' },
-  'Review Moderated': { bg: '#ffa500', text: '#000000' },
-  'Report Generated': { bg: '#a855f7', text: '#ffffff' },
-  'Room Updated': { bg: '#0F51AF', text: '#ffffff' },
-  'Promo Created': { bg: '#0F51AF', text: '#ffffff' },
-  'User Login': { bg: '#666', text: '#ffffff' },
-  'Inquiry Resolved': { bg: '#0F51AF', text: '#ffffff' },
-  'Staff Updated': { bg: '#0F51AF', text: '#ffffff' },
+  'create': { bg: '#0F51AF', text: '#ffffff' },
+  'update': { bg: '#0F51AF', text: '#ffffff' },
+  'delete': { bg: '#ff4444', text: '#ffffff' },
+  'approve': { bg: '#0F51AF', text: '#ffffff' },
+  'reject': { bg: '#ff4444', text: '#ffffff' },
+  'login': { bg: '#666', text: '#ffffff' },
+  'logout': { bg: '#666', text: '#ffffff' },
+  'view': { bg: '#a855f7', text: '#ffffff' },
 };
 
 export function AdminAuditLogs() {
-  const [logs] = useState(mockLogs);
+  const dispatch = useAppDispatch();
+  const { logs, loading, error, totalCount } = useAppSelector((state) => state.auditLogs);
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [filterModule, setFilterModule] = useState('all');
   const [filterAction, setFilterAction] = useState('all');
 
+  useEffect(() => {
+    dispatch(fetchAuditLogs({ page: 1, limit: 100 }));
+  }, [dispatch]);
+
   const filteredLogs = logs.filter(log => {
     const matchesSearch = 
-      log.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      log.user_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
       log.details.toLowerCase().includes(searchTerm.toLowerCase());
     
@@ -52,12 +45,77 @@ export function AdminAuditLogs() {
     return matchesSearch && matchesModule && matchesAction;
   });
 
-  const handleExportLogs = () => {
-    toast.success('Exporting audit logs...');
+  const handleExportLogs = async () => {
+    try {
+      await dispatch(exportAuditLogs()).unwrap();
+      toast.success('Audit logs exported successfully');
+    } catch (error) {
+      toast.error('Failed to export logs');
+      console.error('Error exporting logs:', error);
+    }
   };
 
   const modules = ['all', ...Array.from(new Set(logs.map(log => log.module)))];
   const actions = ['all', ...Array.from(new Set(logs.map(log => log.action)))];
+
+  // Loading state
+  if (loading && logs.length === 0) {
+    return (
+      <div className="relative p-4 sm:p-6 space-y-4 sm:space-y-6 min-h-screen">
+        <div 
+          className="fixed inset-0 bg-cover bg-center"
+          style={{ 
+            backgroundImage: `url(${backgroundImage})`,
+            zIndex: -2
+          }}
+        />
+        <div 
+          className="fixed inset-0"
+          style={{ 
+            backgroundColor: 'rgba(0, 28, 67, 0.5)',
+            zIndex: -1
+          }}
+        />
+        <Card className="bg-gray-light border-gray-text/20">
+          <CardContent className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-primary" />
+            <span className="ml-3 text-gray-text">Loading audit logs...</span>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="relative p-4 sm:p-6 space-y-4 sm:space-y-6 min-h-screen">
+        <div 
+          className="fixed inset-0 bg-cover bg-center"
+          style={{ 
+            backgroundImage: `url(${backgroundImage})`,
+            zIndex: -2
+          }}
+        />
+        <div 
+          className="fixed inset-0"
+          style={{ 
+            backgroundColor: 'rgba(0, 28, 67, 0.5)',
+            zIndex: -1
+          }}
+        />
+        <Card className="bg-red-50 border-red-200">
+          <CardContent className="flex items-center py-4">
+            <AlertCircle className="h-5 w-5 text-red-600 mr-3" />
+            <div>
+              <p className="text-red-800 font-medium">Error loading audit logs</p>
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="relative p-4 sm:p-6 space-y-4 sm:space-y-6">
@@ -208,16 +266,21 @@ export function AdminAuditLogs() {
                       const actionColor = actionColors[log.action] || { bg: '#666', text: '#ffffff' };
                       return (
                         <tr key={log.id} className="border-b border-gray-300 hover:bg-white/50">
-                          <td className="py-3 px-4 text-xs sm:text-sm text-gray-text">{log.timestamp}</td>
-                          <td className="py-3 px-4 text-sm font-medium text-black">{log.user}</td>
+                          <td className="py-3 px-4 text-xs sm:text-sm text-gray-text">
+                            {new Date(log.created_at).toLocaleString()}
+                          </td>
+                          <td className="py-3 px-4 text-sm font-medium text-black">
+                            {log.user_email}
+                            <div className="text-xs text-gray-text">{log.user_name}</div>
+                          </td>
                           <td className="py-3 px-4">
-                            <Badge style={{ backgroundColor: actionColor.bg, color: actionColor.text }}>
+                            <Badge className="capitalize" style={{ backgroundColor: actionColor.bg, color: actionColor.text }}>
                               {log.action}
                             </Badge>
                           </td>
-                          <td className="py-3 px-4 text-sm text-gray-text">{log.module}</td>
+                          <td className="py-3 px-4 text-sm text-gray-text capitalize">{log.module.replace('_', ' ')}</td>
                           <td className="py-3 px-4 text-sm text-black">{log.details}</td>
-                          <td className="py-3 px-4 text-xs sm:text-sm text-gray-text">{log.ip}</td>
+                          <td className="py-3 px-4 text-xs sm:text-sm text-gray-text">{log.ip_address || 'N/A'}</td>
                         </tr>
                       );
                     })}

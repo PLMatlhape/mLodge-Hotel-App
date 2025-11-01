@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Mail, Edit2, Eye, Send } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Mail, Edit2, Eye, Send, Loader2, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
@@ -10,61 +10,14 @@ import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { toast } from '../../lib/toast';
 import backgroundImage from '../../assets/image/background/Offers-section.jpeg';
-
-const mockTemplates = [
-  { 
-    id: 1, 
-    name: 'Booking Confirmation', 
-    subject: 'Your Booking Confirmation - {booking_id}', 
-    category: 'Bookings',
-    body: 'Dear {guest_name},\n\nThank you for booking with mLodge Hotel. Your booking has been confirmed.\n\nBooking Details:\nReference: {booking_id}\nRoom: {room_name}\nCheck-in: {check_in_date}\nCheck-out: {check_out_date}\nTotal Amount: R{total_amount}\n\nWe look forward to welcoming you!\n\nBest regards,\nmLodge Hotel Team',
-    variables: ['guest_name', 'booking_id', 'room_name', 'check_in_date', 'check_out_date', 'total_amount']
-  },
-  { 
-    id: 2, 
-    name: 'Booking Cancellation', 
-    subject: 'Booking Cancelled - {booking_id}', 
-    category: 'Bookings',
-    body: 'Dear {guest_name},\n\nYour booking {booking_id} has been cancelled as requested.\n\nA refund of R{refund_amount} will be processed within 5-7 business days.\n\nWe hope to see you again in the future.\n\nBest regards,\nmLodge Hotel Team',
-    variables: ['guest_name', 'booking_id', 'refund_amount']
-  },
-  { 
-    id: 3, 
-    name: 'Refund Approved', 
-    subject: 'Refund Approved - {refund_id}', 
-    category: 'Refunds',
-    body: 'Dear {guest_name},\n\nYour refund request ({refund_id}) has been approved.\n\nRefund Amount: R{refund_amount}\nOriginal Booking: {booking_id}\n\nThe refund will be processed to your original payment method within 5-7 business days.\n\nBest regards,\nmLodge Hotel Team',
-    variables: ['guest_name', 'refund_id', 'refund_amount', 'booking_id']
-  },
-  { 
-    id: 4, 
-    name: 'Review Request', 
-    subject: 'How was your stay at mLodge Hotel?', 
-    category: 'Reviews',
-    body: 'Dear {guest_name},\n\nThank you for staying with us! We hope you enjoyed your time at mLodge Hotel.\n\nWe would love to hear about your experience. Please take a moment to leave us a review.\n\nYour booking reference: {booking_id}\n\n[Leave a Review Button]\n\nBest regards,\nmLodge Hotel Team',
-    variables: ['guest_name', 'booking_id']
-  },
-  { 
-    id: 5, 
-    name: 'Welcome Email', 
-    subject: 'Welcome to mLodge Hotel!', 
-    category: 'Marketing',
-    body: 'Dear {guest_name},\n\nWelcome to mLodge Hotel! We\'re thrilled to have you as our guest.\n\nEnjoy 15% off your first booking with code: WELCOME15\n\nDiscover our luxurious rooms and exceptional service across South Africa.\n\nBest regards,\nmLodge Hotel Team',
-    variables: ['guest_name']
-  },
-  { 
-    id: 6, 
-    name: 'Payment Receipt', 
-    subject: 'Payment Receipt - {booking_id}', 
-    category: 'Payments',
-    body: 'Dear {guest_name},\n\nThank you for your payment.\n\nPayment Details:\nBooking Reference: {booking_id}\nAmount Paid: R{payment_amount}\nPayment Method: {payment_method}\nDate: {payment_date}\n\nYour receipt is attached to this email.\n\nBest regards,\nmLodge Hotel Team',
-    variables: ['guest_name', 'booking_id', 'payment_amount', 'payment_method', 'payment_date']
-  },
-];
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { fetchAllTemplates, updateTemplate, type EmailTemplate } from '../../store/slices/emailTemplatesSlice';
 
 export function AdminEmailTemplates() {
-  const [templates, setTemplates] = useState(mockTemplates);
-  const [selectedTemplate, setSelectedTemplate] = useState<typeof mockTemplates[0] | null>(null);
+  const dispatch = useAppDispatch();
+  const { templates, loading, error } = useAppSelector((state) => state.emailTemplates);
+  
+  const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
   const [editFormData, setEditFormData] = useState({
@@ -72,7 +25,11 @@ export function AdminEmailTemplates() {
     body: '',
   });
 
-  const handleEditTemplate = (template: typeof mockTemplates[0]) => {
+  useEffect(() => {
+    dispatch(fetchAllTemplates());
+  }, [dispatch]);
+
+  const handleEditTemplate = (template: EmailTemplate) => {
     setSelectedTemplate(template);
     setEditFormData({
       subject: template.subject,
@@ -81,22 +38,30 @@ export function AdminEmailTemplates() {
     setIsEditDialogOpen(true);
   };
 
-  const handleSaveTemplate = () => {
-    if (!editFormData.subject || !editFormData.body) {
+  const handleSaveTemplate = async () => {
+    if (!editFormData.subject || !editFormData.body || !selectedTemplate) {
       toast.error('Please fill in all fields');
       return;
     }
 
-    setTemplates(templates.map(t => 
-      t.id === selectedTemplate?.id 
-        ? { ...t, subject: editFormData.subject, body: editFormData.body }
-        : t
-    ));
-    toast.success('Email template updated successfully');
-    setIsEditDialogOpen(false);
+    try {
+      await dispatch(updateTemplate({
+        id: selectedTemplate.id,
+        updates: {
+          subject: editFormData.subject,
+          body: editFormData.body,
+        }
+      })).unwrap();
+      toast.success('Email template updated successfully');
+      setIsEditDialogOpen(false);
+      dispatch(fetchAllTemplates());
+    } catch (error) {
+      toast.error('Failed to update template');
+      console.error('Error updating template:', error);
+    }
   };
 
-  const handlePreview = (template: typeof mockTemplates[0]) => {
+  const handlePreview = (template: EmailTemplate) => {
     setSelectedTemplate(template);
     setIsPreviewDialogOpen(true);
   };
@@ -105,7 +70,7 @@ export function AdminEmailTemplates() {
     toast.success('Test email sent to your email address');
   };
 
-  const getPreviewContent = (template: typeof mockTemplates[0]) => {
+  const getPreviewContent = (template: EmailTemplate) => {
     let subject = template.subject;
     let body = template.body;
 
@@ -113,6 +78,7 @@ export function AdminEmailTemplates() {
     const sampleData: { [key: string]: string } = {
       guest_name: 'John Doe',
       booking_id: 'BK-2025-1234',
+      booking_reference: 'BK-2025-1234',
       room_name: 'Luxury Penthouse',
       check_in_date: '2025-10-25',
       check_out_date: '2025-10-28',
@@ -125,15 +91,75 @@ export function AdminEmailTemplates() {
     };
 
     template.variables.forEach(variable => {
-      const regex = new RegExp(`{${variable}}`, 'g');
-      subject = subject.replace(regex, sampleData[variable] || variable);
-      body = body.replace(regex, sampleData[variable] || variable);
+      const cleanVar = variable.replace(/[{}]/g, '');
+      const regex = new RegExp(`{{${cleanVar}}}|{${cleanVar}}`, 'g');
+      subject = subject.replace(regex, sampleData[cleanVar] || cleanVar);
+      body = body.replace(regex, sampleData[cleanVar] || cleanVar);
     });
 
     return { subject, body };
   };
 
-  const categories = Array.from(new Set(templates.map(t => t.category)));
+  const categories = Array.from(new Set(templates.map(t => t.type)));
+
+  // Loading state
+  if (loading && templates.length === 0) {
+    return (
+      <div className="relative p-4 sm:p-6 space-y-4 sm:space-y-6 min-h-screen">
+        <div 
+          className="fixed inset-0 bg-cover bg-center"
+          style={{ 
+            backgroundImage: `url(${backgroundImage})`,
+            zIndex: -2
+          }}
+        />
+        <div 
+          className="fixed inset-0"
+          style={{ 
+            backgroundColor: 'rgba(0, 28, 67, 0.5)',
+            zIndex: -1
+          }}
+        />
+        <Card className="bg-gray-light border-gray-text/20">
+          <CardContent className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-primary" />
+            <span className="ml-3 text-gray-text">Loading templates...</span>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="relative p-4 sm:p-6 space-y-4 sm:space-y-6 min-h-screen">
+        <div 
+          className="fixed inset-0 bg-cover bg-center"
+          style={{ 
+            backgroundImage: `url(${backgroundImage})`,
+            zIndex: -2
+          }}
+        />
+        <div 
+          className="fixed inset-0"
+          style={{ 
+            backgroundColor: 'rgba(0, 28, 67, 0.5)',
+            zIndex: -1
+          }}
+        />
+        <Card className="bg-red-50 border-red-200">
+          <CardContent className="flex items-center py-4">
+            <AlertCircle className="h-5 w-5 text-red-600 mr-3" />
+            <div>
+              <p className="text-red-800 font-medium">Error loading templates</p>
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="relative p-4 sm:p-6 space-y-4 sm:space-y-6">

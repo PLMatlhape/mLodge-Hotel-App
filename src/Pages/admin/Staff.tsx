@@ -1,125 +1,116 @@
-import { useState } from 'react';
-import { Plus, Edit2, Trash2, Users, Shield } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Edit2, Trash2, Users, Shield, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { Switch } from '../../components/ui/switch';
 import { Badge } from '../../components/ui/badge';
-import { Checkbox } from '../../components/ui/checkbox';
 import { toast } from '../../lib/toast';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { 
+  fetchAllStaff, 
+  createStaff, 
+  updateStaff, 
+  deleteStaff,
+  type StaffMember 
+} from '../../store/slices/staffSlice';
 import backgroundImage from '../../assets/image/background/Offers-section.jpeg';
 
-const mockStaff = [
-  { id: 1, name: 'Admin User', email: 'admin@mlodge.com', role: 'Super Admin', active: true, permissions: ['all'], lastLogin: '2025-10-19 14:30' },
-  { id: 2, name: 'Jane Manager', email: 'jane@mlodge.com', role: 'Manager', active: true, permissions: ['bookings', 'reviews', 'analytics', 'reports', 'inquiries', 'inventory'], lastLogin: '2025-10-19 10:15' },
-  { id: 3, name: 'John Receptionist', email: 'john@mlodge.com', role: 'Front Desk', active: true, permissions: ['bookings', 'inquiries'], lastLogin: '2025-10-18 16:45' },
-  { id: 4, name: 'Sarah Finance', email: 'sarah@mlodge.com', role: 'Finance', active: true, permissions: ['bookings', 'refunds', 'analytics', 'reports'], lastLogin: '2025-10-19 09:20' },
-  { id: 5, name: 'Mike Support', email: 'mike@mlodge.com', role: 'Support', active: false, permissions: ['inquiries', 'reviews'], lastLogin: '2025-10-15 12:00' },
-];
-
-const allPermissions = [
-  { id: 'bookings', label: 'Bookings Management' },
-  { id: 'refunds', label: 'Refunds Tracker' },
-  { id: 'reviews', label: 'Review Moderation' },
-  { id: 'analytics', label: 'Performance Analytics' },
-  { id: 'reports', label: 'Summary Reports' },
-  { id: 'inquiries', label: 'Inquiries & Notifications' },
-  { id: 'inventory', label: 'Room Inventory' },
-  { id: 'promos', label: 'Promo Codes' },
-  { id: 'staff', label: 'Staff Management' },
-  { id: 'logs', label: 'Audit Logs' },
-  { id: 'emails', label: 'Email Templates' },
-];
-
 export function AdminStaff() {
-  const [staff, setStaff] = useState(mockStaff);
+  const dispatch = useAppDispatch();
+  const { staff, loading, error } = useAppSelector((state) => state.staff);
+
+  // Fetch staff on mount
+  useEffect(() => {
+    dispatch(fetchAllStaff({ page: 1, limit: 100 }));
+  }, [dispatch]);
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingStaff, setEditingStaff] = useState<typeof mockStaff[0] | null>(null);
+  const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    role: 'Front Desk',
-    active: true,
-    permissions: [] as string[],
+    phone: '',
+    role: 'Receptionist' as StaffMember['role'],
+    department: '',
+    hire_date: new Date().toISOString().split('T')[0],
+    salary: 0,
+    emergency_contact: '',
+    address: '',
   });
 
-  const handleOpenDialog = (staffMember?: typeof mockStaff[0]) => {
+  const handleOpenDialog = (staffMember?: StaffMember) => {
     if (staffMember) {
       setEditingStaff(staffMember);
       setFormData({
         name: staffMember.name,
         email: staffMember.email,
+        phone: staffMember.phone,
         role: staffMember.role,
-        active: staffMember.active,
-        permissions: staffMember.permissions,
+        department: staffMember.department || '',
+        hire_date: staffMember.hire_date,
+        salary: staffMember.salary || 0,
+        emergency_contact: staffMember.emergency_contact || '',
+        address: staffMember.address || '',
       });
     } else {
       setEditingStaff(null);
       setFormData({
         name: '',
         email: '',
-        role: 'Front Desk',
-        active: true,
-        permissions: [],
+        phone: '',
+        role: 'Receptionist',
+        department: '',
+        hire_date: new Date().toISOString().split('T')[0],
+        salary: 0,
+        emergency_contact: '',
+        address: '',
       });
     }
     setIsDialogOpen(true);
   };
 
-  const handleSaveStaff = () => {
-    if (!formData.name || !formData.email) {
+  const handleSaveStaff = async () => {
+    if (!formData.name || !formData.email || !formData.phone) {
       toast.error('Please fill in all required fields');
       return;
     }
 
-    if (editingStaff) {
-      setStaff(staff.map(s => 
-        s.id === editingStaff.id 
-          ? { 
-              ...s, 
-              name: formData.name,
-              email: formData.email,
-              role: formData.role,
-              active: formData.active,
-              permissions: formData.permissions,
-            } 
-          : s
-      ));
-      toast.success('Staff member updated successfully');
-    } else {
-      const newStaff = {
-        id: Math.max(...staff.map(s => s.id)) + 1,
-        name: formData.name,
-        email: formData.email,
-        role: formData.role,
-        active: formData.active,
-        permissions: formData.permissions,
-        lastLogin: 'Never',
-      };
-      setStaff([...staff, newStaff]);
-      toast.success('Staff member added successfully');
+    try {
+      if (editingStaff) {
+        await dispatch(updateStaff({
+          id: editingStaff.id,
+          staffData: formData,
+        })).unwrap();
+        toast.success('Staff member updated successfully');
+      } else {
+        await dispatch(createStaff(formData)).unwrap();
+        toast.success('Staff member added successfully');
+      }
+      setIsDialogOpen(false);
+      // Refresh staff list
+      dispatch(fetchAllStaff({ page: 1, limit: 100 }));
+    } catch (err) {
+      toast.error(editingStaff ? 'Failed to update staff member' : 'Failed to create staff member');
+      console.error('Error saving staff:', err);
     }
-    setIsDialogOpen(false);
   };
 
-  const handleDeleteStaff = (staffId: number) => {
-    setStaff(staff.filter(s => s.id !== staffId));
-    toast.success('Staff member removed');
+  const handleDeleteStaff = async (staffId: number) => {
+    try {
+      await dispatch(deleteStaff(staffId)).unwrap();
+      toast.success('Staff member removed');
+      // Refresh staff list
+      dispatch(fetchAllStaff({ page: 1, limit: 100 }));
+    } catch (err) {
+      toast.error('Failed to delete staff member');
+      console.error('Error deleting staff:', err);
+    }
   };
 
-  const togglePermission = (permissionId: string) => {
-    setFormData({
-      ...formData,
-      permissions: formData.permissions.includes(permissionId)
-        ? formData.permissions.filter(p => p !== permissionId)
-        : [...formData.permissions, permissionId],
-    });
-  };
-
-  const activeStaff = staff.filter(s => s.active).length;
+  const activeStaff = staff.filter(s => s.status === 'active').length;
 
   return (
     <div className="relative p-4 sm:p-6 space-y-4 sm:space-y-6">
@@ -154,6 +145,30 @@ export function AdminStaff() {
           Add Staff Member
         </Button>
       </div>
+
+      {/* Loading State */}
+      {loading && (
+        <Card className="bg-gray-light border-0">
+          <CardContent className="p-6 text-center">
+            <div className="flex items-center justify-center gap-2">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-primary"></div>
+              <p className="text-black">Loading staff members...</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <Card className="bg-red-100 border-red-300">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+              <p className="text-red-600">Error: {error}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
@@ -196,7 +211,7 @@ export function AdminStaff() {
                       <th className="text-left py-3 px-4 text-xs sm:text-sm text-gray-text font-medium">Name</th>
                       <th className="text-left py-3 px-4 text-xs sm:text-sm text-gray-text font-medium">Email</th>
                       <th className="text-left py-3 px-4 text-xs sm:text-sm text-gray-text font-medium">Role</th>
-                      <th className="text-left py-3 px-4 text-xs sm:text-sm text-gray-text font-medium">Last Login</th>
+                      <th className="text-left py-3 px-4 text-xs sm:text-sm text-gray-text font-medium">Department</th>
                       <th className="text-left py-3 px-4 text-xs sm:text-sm text-gray-text font-medium">Status</th>
                       <th className="text-left py-3 px-4 text-xs sm:text-sm text-gray-text font-medium">Actions</th>
                     </tr>
@@ -207,18 +222,16 @@ export function AdminStaff() {
                         <td className="py-3 px-4 text-sm font-medium text-black">{member.name}</td>
                         <td className="py-3 px-4 text-sm text-gray-text">{member.email}</td>
                         <td className="py-3 px-4">
-                          <Badge
-                            className={member.role === 'Super Admin' ? 'bg-blue-primary text-white' : 'bg-sky-500 text-white'}
-                          >
+                          <Badge className="bg-blue-primary text-white capitalize">
                             {member.role}
                           </Badge>
                         </td>
-                        <td className="py-3 px-4 text-sm text-gray-text">{member.lastLogin}</td>
+                        <td className="py-3 px-4 text-sm text-gray-text">{member.department || 'N/A'}</td>
                         <td className="py-3 px-4">
                           <Badge
-                            className={member.active ? 'bg-blue-primary text-white' : 'bg-gray-600 text-white'}
+                            className={member.status === 'active' ? 'bg-green-600 text-white' : member.status === 'on_leave' ? 'bg-yellow-600 text-white' : 'bg-gray-600 text-white'}
                           >
-                            {member.active ? 'Active' : 'Inactive'}
+                            {member.status === 'on_leave' ? 'On Leave' : member.status}
                           </Badge>
                         </td>
                         <td className="py-3 px-4">
@@ -231,16 +244,14 @@ export function AdminStaff() {
                             >
                               <Edit2 className="h-4 w-4" />
                             </Button>
-                            {member.role !== 'Super Admin' && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleDeleteStaff(member.id)}
-                                className="text-red-500 hover:text-red-500 hover:bg-red-50"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleDeleteStaff(member.id)}
+                              className="text-red-500 hover:text-red-500 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </td>
                       </tr>
@@ -278,42 +289,72 @@ export function AdminStaff() {
               />
             </div>
             <div>
+              <Label className="text-black">Phone *</Label>
+              <Input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="bg-white border-gray-300 text-black"
+              />
+            </div>
+            <div>
               <Label className="text-black">Role *</Label>
-              <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
+              <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value as StaffMember['role'] })}>
                 <SelectTrigger className="bg-white border-gray-300 text-black">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-white border-gray-300">
-                  <SelectItem value="Super Admin" className="text-black">Super Admin</SelectItem>
                   <SelectItem value="Manager" className="text-black">Manager</SelectItem>
-                  <SelectItem value="Front Desk" className="text-black">Front Desk</SelectItem>
-                  <SelectItem value="Finance" className="text-black">Finance</SelectItem>
-                  <SelectItem value="Support" className="text-black">Support</SelectItem>
+                  <SelectItem value="Receptionist" className="text-black">Receptionist</SelectItem>
+                  <SelectItem value="Housekeeping" className="text-black">Housekeeping</SelectItem>
+                  <SelectItem value="Maintenance" className="text-black">Maintenance</SelectItem>
+                  <SelectItem value="Security" className="text-black">Security</SelectItem>
+                  <SelectItem value="Other" className="text-black">Other</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={formData.active}
-                onCheckedChange={(checked) => setFormData({ ...formData, active: checked })}
+            <div>
+              <Label className="text-black">Department</Label>
+              <Input
+                value={formData.department}
+                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                className="bg-white border-gray-300 text-black"
               />
-              <Label className="text-black">Active Account</Label>
             </div>
             <div>
-              <Label className="text-black mb-2 block">Permissions</Label>
-              <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto">
-                {allPermissions.map((permission) => (
-                  <div key={permission.id} className="flex items-center gap-2 p-2 rounded bg-gray-light">
-                    <Checkbox
-                      checked={formData.permissions.includes(permission.id)}
-                      onCheckedChange={() => togglePermission(permission.id)}
-                    />
-                    <label className="text-black cursor-pointer" onClick={() => togglePermission(permission.id)}>
-                      {permission.label}
-                    </label>
-                  </div>
-                ))}
-              </div>
+              <Label className="text-black">Hire Date *</Label>
+              <Input
+                type="date"
+                value={formData.hire_date}
+                onChange={(e) => setFormData({ ...formData, hire_date: e.target.value })}
+                className="bg-white border-gray-300 text-black"
+              />
+            </div>
+            <div>
+              <Label className="text-black">Salary</Label>
+              <Input
+                type="number"
+                value={formData.salary}
+                onChange={(e) => setFormData({ ...formData, salary: parseFloat(e.target.value) || 0 })}
+                className="bg-white border-gray-300 text-black"
+              />
+            </div>
+            <div>
+              <Label className="text-black">Emergency Contact</Label>
+              <Input
+                value={formData.emergency_contact}
+                onChange={(e) => setFormData({ ...formData, emergency_contact: e.target.value })}
+                className="bg-white border-gray-300 text-black"
+                placeholder="Phone number"
+              />
+            </div>
+            <div>
+              <Label className="text-black">Address</Label>
+              <Input
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                className="bg-white border-gray-300 text-black"
+              />
             </div>
             <div className="flex gap-3 pt-4">
               <Button
