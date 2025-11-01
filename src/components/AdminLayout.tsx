@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAppDispatch } from '../store/hooks';
+import { logout } from '../store/slices/authSlice';
 import { Menu, X } from 'lucide-react';
 import logo from '../assets/image/Erxtras/Logo-mLodge-hotel.png';
 import backgroundImage from '../assets/image/background/Offers-section.jpeg';
@@ -23,6 +26,8 @@ interface AdminLayoutProps {
 }
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children, currentPage, onNavigate }) => {
+  const navigate = useNavigate();
+  const dispatch = useAppDispatch();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -42,7 +47,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, currentPage, onNavi
   ];
 
   const handleLogout = () => {
-    window.location.href = '/';
+    dispatch(logout());
+    navigate('/');
   };
 
   const handleNavigate = (page: string) => {

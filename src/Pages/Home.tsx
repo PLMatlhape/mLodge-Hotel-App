@@ -1,12 +1,38 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
 import Offers from './Offers';
 import HottestRooms from './HottestRooms';
 import Events from './Events';
+import RoomDetails from './Client/RoomDetails';
 import homeBackground from '../assets/image/background/Home-page-background.jpeg';
 
+interface Room {
+  id: number;
+  name: string;
+  location?: string;
+  beds: number;
+  baths: number;
+  area: number;
+  guests?: string;
+  price: number;
+  rating?: number;
+  image: string;
+  badge: string;
+  favorite?: boolean;
+}
+
 const Home: React.FC = () => {
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+
+  const handleRoomClick = (room: Room) => {
+    setSelectedRoom(room);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedRoom(null);
+  };
   return (
     <div className="min-h-screen bg-[#001F3F]">
       <Navigation />
@@ -35,12 +61,18 @@ const Home: React.FC = () => {
           
           {/* CTA Buttons */}
           <div className="flex gap-6">
-            <button className="px-7 py-3 bg-[#0056D2] text-white rounded hover:bg-[#0045b0] transition-colors font-medium">
+            <Link 
+              to="/dashboard" 
+              className="px-7 py-3 bg-[#0056D2] text-white rounded hover:bg-[#0045b0] transition-colors font-medium"
+            >
               Book Your Stay
-            </button>
-            <button className="px-7 py-3 bg-transparent text-white border-2 border-white rounded hover:bg-white/10 transition-colors font-medium">
+            </Link>
+            <Link 
+              to="/dashboard" 
+              className="px-7 py-3 bg-transparent text-white border-2 border-white rounded hover:bg-white/10 transition-colors font-medium"
+            >
               Explore rooms
-            </button>
+            </Link>
           </div>
         </div>
 
@@ -100,13 +132,21 @@ const Home: React.FC = () => {
       <Offers />
 
       {/* Hottest Rooms & Amenities Section */}
-      <HottestRooms />
+      <HottestRooms onRoomClick={handleRoomClick} />
 
       {/* Events Section */}
       <Events />
 
       {/* Footer */}
       <Footer />
+
+      {/* Room Details Modal */}
+      {selectedRoom && (
+        <RoomDetails
+          room={selectedRoom}
+          onClose={handleCloseModal}
+        />
+      )}
     </div>
   );
 };

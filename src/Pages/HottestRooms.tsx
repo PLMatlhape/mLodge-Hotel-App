@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 // Hottest Rooms Images
 import deluxeOcean from '../assets/image/hottest-rooms/Deluxe Ocean View.jpeg';
 import executiveBusiness from '../assets/image/hottest-rooms/Executive-business-room.jpeg';
@@ -20,7 +21,12 @@ interface Room {
   area: number;
   price: number;
   image: string;
+  images?: string[];
   badge: string;
+  location?: string;
+  rating?: number;
+  guests?: string;
+  favorite?: boolean;
 }
 
 interface Amenity {
@@ -30,7 +36,11 @@ interface Amenity {
   icon: string;
 }
 
-const HottestRooms: React.FC = () => {
+interface HottestRoomsProps {
+  onRoomClick?: (room: Room) => void;
+}
+
+const HottestRooms: React.FC<HottestRoomsProps> = ({ onRoomClick }) => {
   const rooms: Room[] = [
     {
       id: 1,
@@ -41,29 +51,44 @@ const HottestRooms: React.FC = () => {
       area: 85,
       price: 3500,
       image: deluxeOcean,
-      badge: "premium"
+      images: [deluxeOcean, executiveBusiness, standardComfort],
+      badge: "premium",
+      location: "Cape Town",
+      rating: 4.8,
+      guests: "upto 4 guests",
+      favorite: false
     },
     {
       id: 2,
-      name: "Presidential Suite",
+      name: "Executive Business Suite",
       description: "Luxurious suite with panoramic city views, private terrace, and jacuzzi",
       beds: 4,
       baths: 2,
       area: 45,
       price: 2200,
       image: executiveBusiness,
-      badge: "Business"
+      images: [executiveBusiness, standardComfort, deluxeOcean],
+      badge: "Business",
+      location: "Johannesburg",
+      rating: 4.6,
+      guests: "upto 6 guests",
+      favorite: false
     },
     {
       id: 3,
-      name: "Presidential Suite",
+      name: "Deluxe Ocean View",
       description: "Luxurious suite with panoramic city views, private terrace, and jacuzzi",
       beds: 2,
       baths: 2,
       area: 95,
       price: 2800,
       image: standardComfort,
-      badge: "Business"
+      images: [standardComfort, deluxeOcean, executiveBusiness],
+      badge: "Business",
+      location: "Durban",
+      rating: 4.9,
+      guests: "upto 2 guests",
+      favorite: false
     }
   ];
 
@@ -183,9 +208,21 @@ const HottestRooms: React.FC = () => {
                       <span className="text-gray-900 text-3xl font-bold">R{room.price}</span>
                       <span className="text-gray-500 text-sm">/night</span>
                     </div>
-                    <button className="bg-[#0F51AF] text-white px-6 py-2.5 rounded-lg hover:bg-[#0d4291] transition-colors font-medium">
-                      Book Now
-                    </button>
+                    {onRoomClick ? (
+                      <button
+                        onClick={() => onRoomClick(room)}
+                        className="bg-[#0F51AF] text-white px-6 py-2.5 rounded-lg hover:bg-[#0d4291] transition-colors font-medium"
+                      >
+                        Book Now
+                      </button>
+                    ) : (
+                      <Link 
+                        to="/dashboard" 
+                        className="bg-[#0F51AF] text-white px-6 py-2.5 rounded-lg hover:bg-[#0d4291] transition-colors font-medium"
+                      >
+                        Book Now
+                      </Link>
+                    )}
                   </div>
                 </div>
               </div>

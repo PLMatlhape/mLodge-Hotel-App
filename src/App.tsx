@@ -1,42 +1,35 @@
-import { useState, useEffect } from 'react'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Home from './Pages/Home'
 import Login from './Pages/Login'
+import Register from './Pages/Register'
 import Dashboard from './Pages/Client/Dashboard'
+import Profile from './Pages/Client/Profile'
+import BookNow from './Pages/BookNow'
 import AdminDashboard from './Pages/admin/AdminDashboard'
 import './App.css'
 
 function App() {
-  const [currentPath, setCurrentPath] = useState(window.location.pathname)
-
-  useEffect(() => {
-    const handleLocationChange = () => {
-      setCurrentPath(window.location.pathname)
-    }
-
-    window.addEventListener('popstate', handleLocationChange)
-    
-    // Handle initial navigation
-    handleLocationChange()
-
-    return () => {
-      window.removeEventListener('popstate', handleLocationChange)
-    }
-  }, [])
-
-  // Simple routing based on path
-  if (currentPath === '/login') {
-    return <Login />
-  }
-
-  if (currentPath.startsWith('/admin')) {
-    return <AdminDashboard />
-  }
-
-  if (currentPath === '/dashboard') {
-    return <Dashboard />
-  }
-
-  return <Home />
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        
+        {/* Client Routes */}
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/book" element={<BookNow />} />
+        
+        {/* Admin Routes */}
+        <Route path="/admin/*" element={<AdminDashboard />} />
+        
+        {/* Catch all - redirect to home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  )
 }
 
 export default App
