@@ -35,11 +35,11 @@ export function AdminRefunds() {
   const [adminNotes, setAdminNotes] = useState('');
 
   const filteredRefunds = refunds.filter(refund => {
-    const matchesSearch = 
+    const matchesSearch =
       refund.id.toString().includes(searchTerm.toLowerCase()) ||
       refund.booking_reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
       refund.guest_name.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesStatus = filterStatus === 'all' || refund.status === filterStatus;
 
     return matchesSearch && matchesStatus;
@@ -79,7 +79,7 @@ export function AdminRefunds() {
 
   const handleProcess = async (refundId: number) => {
     try {
-      await dispatch(processRefund(refundId)).unwrap();
+      await dispatch(processRefund({ id: refundId })).unwrap();
       toast.success('Refund processed successfully');
       setIsDialogOpen(false);
       setAdminNotes('');
@@ -93,40 +93,40 @@ export function AdminRefunds() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Pending': return { bg: '#ffa500', text: '#FFFFFF' };
-      case 'Approved': return { bg: '#0F51AF', text: '#FFFFFF' };
-      case 'Processed': return { bg: '#00bfff', text: '#FFFFFF' };
-      case 'Rejected': return { bg: '#ff4444', text: '#ffffff' };
+      case 'pending': return { bg: '#ffa500', text: '#FFFFFF' };
+      case 'approved': return { bg: '#0F51AF', text: '#FFFFFF' };
+      case 'completed': return { bg: '#00bfff', text: '#FFFFFF' };
+      case 'rejected': return { bg: '#ff4444', text: '#ffffff' };
       default: return { bg: '#666', text: '#ffffff' };
     }
   };
 
   const statsCount = {
-    pending: refunds.filter(r => r.status === 'Pending').length,
-    approved: refunds.filter(r => r.status === 'Approved').length,
-    processed: refunds.filter(r => r.status === 'Processed').length,
-    rejected: refunds.filter(r => r.status === 'Rejected').length,
+    pending: refunds.filter(r => r.status === 'pending').length,
+    approved: refunds.filter(r => r.status === 'approved').length,
+    completed: refunds.filter(r => r.status === 'completed').length,
+    rejected: refunds.filter(r => r.status === 'rejected').length,
   };
 
   return (
     <div className="relative p-4 sm:p-6 space-y-4 sm:space-y-6 min-h-screen">
       {/* Background Image */}
-      <div 
+      <div
         className="fixed inset-0 bg-cover bg-center"
-        style={{ 
+        style={{
           backgroundImage: `url(${backgroundImage})`,
           zIndex: -2
         }}
       />
       {/* Overlay */}
-      <div 
+      <div
         className="fixed inset-0"
-        style={{ 
+        style={{
           backgroundColor: 'rgba(0, 28, 67, 0.5)',
           zIndex: -1
         }}
       />
-      
+
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 text-white">Refunds Tracker</h1>
@@ -192,8 +192,8 @@ export function AdminRefunds() {
                 <DollarSign className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: '#00bfff' }} />
               </div>
               <div>
-                <p className="text-gray-text text-xs sm:text-sm">Processed</p>
-                <p className="text-black text-xl sm:text-2xl font-bold">{statsCount.processed}</p>
+                <p className="text-gray-text text-xs sm:text-sm">Completed</p>
+                <p className="text-black text-xl sm:text-2xl font-bold">{statsCount.completed}</p>
               </div>
             </div>
           </CardContent>
@@ -232,10 +232,10 @@ export function AdminRefunds() {
               </SelectTrigger>
               <SelectContent className="bg-gray-light border-gray-text/20">
                 <SelectItem value="all" className="text-black">All Statuses</SelectItem>
-                <SelectItem value="Pending" className="text-black">Pending</SelectItem>
-                <SelectItem value="Approved" className="text-black">Approved</SelectItem>
-                <SelectItem value="Processed" className="text-black">Processed</SelectItem>
-                <SelectItem value="Rejected" className="text-black">Rejected</SelectItem>
+                <SelectItem value="pending" className="text-black">Pending</SelectItem>
+                <SelectItem value="approved" className="text-black">Approved</SelectItem>
+                <SelectItem value="completed" className="text-black">Completed</SelectItem>
+                <SelectItem value="rejected" className="text-black">Rejected</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -275,14 +275,14 @@ export function AdminRefunds() {
                           <div className="text-gray-text text-xs">{refund.guest_email}</div>
                         </div>
                       </td>
-                      <td className="py-2 sm:py-3 px-3 sm:px-4 text-black text-xs sm:text-sm font-medium">R {refund.amount.toLocaleString()}</td>
+                      <td className="py-2 sm:py-3 px-3 sm:px-4 text-black text-xs sm:text-sm font-medium">R {refund.refund_amount.toLocaleString()}</td>
                       <td className="py-2 sm:py-3 px-3 sm:px-4 text-gray-text text-xs sm:text-sm">
                         {new Date(refund.requested_date).toLocaleDateString()}
                       </td>
                       <td className="py-2 sm:py-3 px-3 sm:px-4 text-gray-text text-xs sm:text-sm">{refund.reason}</td>
                       <td className="py-2 sm:py-3 px-3 sm:px-4">
                         <Badge
-                          className="text-xs"
+                          className="text-xs capitalize"
                           style={{
                             backgroundColor: statusColor.bg,
                             color: statusColor.text,
@@ -336,7 +336,7 @@ export function AdminRefunds() {
                 </div>
                 <div>
                   <Label className="text-gray-text text-sm">Amount</Label>
-                  <p className="text-black font-medium">R {selectedRefund.amount.toLocaleString()}</p>
+                  <p className="text-black font-medium">R {selectedRefund.refund_amount.toLocaleString()}</p>
                 </div>
                 <div className="col-span-1 sm:col-span-2">
                   <Label className="text-gray-text text-sm">Reason</Label>
@@ -350,15 +350,15 @@ export function AdminRefunds() {
                   <Label className="text-gray-text text-sm">Status</Label>
                   <Badge className="capitalize">{selectedRefund.status}</Badge>
                 </div>
-                {selectedRefund.rejection_reason && (
+                {selectedRefund.admin_notes && (
                   <div className="col-span-1 sm:col-span-2">
-                    <Label className="text-gray-text text-sm">Rejection Reason</Label>
-                    <p className="text-red-600">{selectedRefund.rejection_reason}</p>
+                    <Label className="text-gray-text text-sm">Admin Notes</Label>
+                    <p className="text-black">{selectedRefund.admin_notes}</p>
                   </div>
                 )}
               </div>
 
-              {selectedRefund.status === 'Pending' && (
+              {selectedRefund.status === 'pending' && (
                 <>
                   <div>
                     <Label className="text-black text-sm">Admin Notes</Label>
@@ -388,26 +388,26 @@ export function AdminRefunds() {
                 </>
               )}
 
-              {selectedRefund.status === 'Approved' && (
+              {selectedRefund.status === 'approved' && (
                 <div className="flex gap-3">
                   <Button
                     onClick={() => handleProcess(selectedRefund.id)}
                     className="bg-blue-primary text-white hover:bg-blue-primary/90"
                   >
                     <DollarSign className="h-4 w-4 mr-2" />
-                    Mark as Processed
+                    Mark as Completed
                   </Button>
                 </div>
               )}
 
-              {(selectedRefund.status === 'Processed' || selectedRefund.status === 'Rejected') && (
+              {(selectedRefund.status === 'completed' || selectedRefund.status === 'rejected') && (
                 <div className="p-4 rounded-lg bg-white">
                   <p className="text-gray-text text-sm">
-                    This refund has been {selectedRefund.status.toLowerCase()}.
+                    This refund has been {selectedRefund.status}.
                     {selectedRefund.processed_date && ` Processed on: ${new Date(selectedRefund.processed_date).toLocaleDateString()}`}
                   </p>
-                  {selectedRefund.rejection_reason && (
-                    <p className="text-black mt-2">Reason: {selectedRefund.rejection_reason}</p>
+                  {selectedRefund.admin_notes && (
+                    <p className="text-black mt-2">Notes: {selectedRefund.admin_notes}</p>
                   )}
                 </div>
               )}
