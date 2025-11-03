@@ -47,7 +47,7 @@ export function AdminEmailTemplates() {
     try {
       await dispatch(updateTemplate({
         id: selectedTemplate.id,
-        updates: {
+        templateData: {
           subject: editFormData.subject,
           body: editFormData.body,
         }

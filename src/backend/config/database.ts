@@ -21,11 +21,21 @@ pool.on('connect', () => {
 pool.on('error', (err: Error) => {
   console.error('❌ Unexpected database error:', err);
   // Don't exit, just log the error
-  console.error('Database connection error - continuing anyway');
 });
 
+// Test connection on startup (async, don't block)
+setTimeout(() => {
+  pool.query('SELECT NOW()', (err) => {
+    if (err) {
+      console.error('❌ Database initialization error:', err.message);
+    } else {
+      console.log('✅ Database connection verified at startup');
+    }
+  });
+}, 100);
+
 // Helper function to execute queries
-export const query = async (text: string, params?: any[]): Promise<QueryResult> => {
+export const query = async (text: string, params?: unknown[]): Promise<QueryResult> => {
   const start = Date.now();
   const res = await pool.query(text, params);
   const duration = Date.now() - start;

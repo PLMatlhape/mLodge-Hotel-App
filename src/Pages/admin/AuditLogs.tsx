@@ -23,7 +23,7 @@ const actionColors: { [key: string]: { bg: string; text: string } } = {
 
 export function AdminAuditLogs() {
   const dispatch = useAppDispatch();
-  const { logs, loading, error, totalCount } = useAppSelector((state) => state.auditLogs);
+  const { logs, loading, error } = useAppSelector((state) => state.auditLogs);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [filterModule, setFilterModule] = useState('all');

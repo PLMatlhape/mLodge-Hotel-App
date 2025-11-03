@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAppDispatch } from '../store/hooks';
 import { loginSuccess } from '../store/slices/authSlice';
+import api from '../services/api';
 import background from '../assets/image/background/login-background.jpeg';
 import centerImage from '../assets/image/background/Offers-section.jpeg';
 import backIcon from '../assets/icons/white/white-back-button-icon.png';
@@ -22,7 +23,7 @@ const Register: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
  
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // Basic validation
     if (!firstname || !lastname || !email || !phone || !password || !confirmPassword) {
@@ -37,12 +38,24 @@ const Register: React.FC = () => {
     setError(null);
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      // Create new user and dispatch to Redux
-      const newUser = {
-        id: Math.random().toString(36).substr(2, 9),
+    try {
+      // Call backend API for registration
+      const response = await api.post('/auth/register', {
         email: email,
+        name: `${firstname} ${lastname}`,
+        phone: phone,
+        password: password,
+      });
+
+      const data = response.data;
+      
+      // Store token in localStorage
+      localStorage.setItem('token', data.token);
+      
+      // Create user object and dispatch to Redux
+      const newUser = {
+        id: data.user.id.toString(),
+        email: data.user.email,
         firstName: firstname,
         lastName: lastname,
         phone: phone,
@@ -50,7 +63,6 @@ const Register: React.FC = () => {
       };
 
       dispatch(loginSuccess(newUser));
-      setIsLoading(false);
       
       // Redirect to returnUrl if it exists, otherwise to dashboard
       if (returnUrl) {
@@ -58,7 +70,17 @@ const Register: React.FC = () => {
       } else {
         navigate('/dashboard');
       }
-    }, 1000);
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      // Extract error message from Axios error response
+      const errorMessage = error?.response?.data?.error || 
+                          error?.response?.data?.message || 
+                          error?.message || 
+                          'Registration failed. Please try again.';
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   }
  
   return (

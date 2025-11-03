@@ -42,7 +42,7 @@ router.post(
 
       // Create user
       const result = await db.query(
-        `INSERT INTO users (email, name, phone, password_hash, role, is_active)
+        `INSERT INTO users (email, name, phone, password, role, is_active)
          VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING id, email, name, phone, role, created_at`,
         [email, name, phone || null, passwordHash, 'user', true]
@@ -53,7 +53,7 @@ router.post(
       // Generate JWT token
       const token = jwt.sign(
         { userId: user.id },
-        process.env.JWT_SECRET!,
+        process.env.JWT_SECRET || 'fallback-secret',
         { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
       );
 
@@ -84,7 +84,7 @@ router.post(
 
       // Find user
       const result = await db.query(
-        'SELECT id, email, name, phone, role, password_hash, is_active FROM users WHERE email = $1',
+        'SELECT id, email, name, phone, role, password, is_active FROM users WHERE email = $1',
         [email]
       );
 
@@ -102,7 +102,7 @@ router.post(
       }
 
       // Verify password
-      const validPassword = await bcrypt.compare(password, user.password_hash);
+      const validPassword = await bcrypt.compare(password, user.password);
       if (!validPassword) {
         res.status(401).json({ error: 'Invalid email or password' });
         return;
@@ -114,12 +114,13 @@ router.post(
       // Generate JWT token
       const token = jwt.sign(
         { userId: user.id },
-        process.env.JWT_SECRET!,
+        process.env.JWT_SECRET || 'fallback-secret',
         { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
       );
 
-      // Remove password_hash from response
-      const { password_hash, ...userWithoutPassword } = user;
+      // Remove password from response
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password: _, ...userWithoutPassword } = user;
 
       res.json({ token, user: userWithoutPassword });
     } catch (error) {
