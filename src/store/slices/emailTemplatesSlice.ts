@@ -39,11 +39,12 @@ export const fetchAllTemplates = createAsyncThunk(
   'emailTemplates/fetchAll',
   async () => {
     const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/email-templates`, {
+    const response = await fetch(`${API_BASE_URL}/admin/email-templates`, {
       headers: { 'Authorization': `Bearer ${token}` },
     });
     if (!response.ok) throw new Error('Failed to fetch email templates');
-    return response.json();
+    const data = await response.json();
+    return data.templates || [];
   }
 );
 
@@ -57,7 +58,7 @@ export const createTemplate = createAsyncThunk(
     variables?: string[];
   }) => {
     const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/email-templates`, {
+    const response = await fetch(`${API_BASE_URL}/admin/email-templates`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -74,7 +75,7 @@ export const updateTemplate = createAsyncThunk(
   'emailTemplates/update',
   async ({ id, templateData }: { id: number; templateData: Partial<EmailTemplate> }) => {
     const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/email-templates/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/admin/email-templates/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -91,7 +92,7 @@ export const toggleTemplateStatus = createAsyncThunk(
   'emailTemplates/toggleStatus',
   async (id: number) => {
     const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/email-templates/${id}/toggle`, {
+    const response = await fetch(`${API_BASE_URL}/admin/email-templates/${id}/toggle`, {
       method: 'PUT',
       headers: { 'Authorization': `Bearer ${token}` },
     });
@@ -104,7 +105,7 @@ export const deleteTemplate = createAsyncThunk(
   'emailTemplates/delete',
   async (id: number) => {
     const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/email-templates/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/admin/email-templates/${id}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` },
     });
