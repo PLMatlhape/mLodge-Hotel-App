@@ -31,7 +31,8 @@ const initialState: ReportsState = {
   error: null,
 };
 
-const API_BASE_URL = 'http://localhost:5001/api';
+// API Base URL
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 const getAuthToken = () => localStorage.getItem('token');
 
 // Async Thunks

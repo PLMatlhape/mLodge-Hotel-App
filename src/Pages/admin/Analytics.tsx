@@ -5,11 +5,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { LineChart, Line, BarChart, Bar, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import backgroundImage from '../../assets/image/background/Offers-section.jpeg';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { fetchDashboardStats, fetchBookingTrends, fetchRevenueTrends } from '../../store/slices/analyticsSlice';
+import { fetchDashboardStats, fetchBookingTrends, fetchRevenueTrends, fetchPerformanceStats, fetchRoomTypeDistribution, fetchBookingSources } from '../../store/slices/analyticsSlice';
 
 export function AdminAnalytics() {
   const dispatch = useAppDispatch();
-  const { dashboardStats, bookingTrends, loading, error } = useAppSelector((state) => state.analytics);
+  const { dashboardStats, bookingTrends, performanceStats, roomTypeData, bookingSourceData, loading, error } = useAppSelector((state) => state.analytics);
   
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year'>('year');
 
@@ -17,6 +17,9 @@ export function AdminAnalytics() {
     dispatch(fetchDashboardStats());
     dispatch(fetchBookingTrends({ period: timeRange }));
     dispatch(fetchRevenueTrends({ period: timeRange }));
+    dispatch(fetchPerformanceStats({ period: timeRange }));
+    dispatch(fetchRoomTypeDistribution());
+    dispatch(fetchBookingSources());
   }, [dispatch, timeRange]);
 
   // Transform data for charts
@@ -86,7 +89,7 @@ export function AdminAnalytics() {
   }
 
   return (
-    <div className="relative p-6 space-y-6">
+    <div className="relative min-h-screen">
       {/* Background Image */}
       <div 
         className="fixed inset-0 bg-cover bg-center"
@@ -104,13 +107,15 @@ export function AdminAnalytics() {
         }}
       />
       
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 style={{ color: '#FFFFFF', fontSize: '2rem', marginBottom: '0.5rem' }}>Performance Analytics</h1>
-          <p style={{ color: '#FFFFFF' }}>Comprehensive insights into booking trends and performance</p>
-        </div>
-        <Select value={timeRange} onValueChange={setTimeRange}>
+      {/* Content with padding */}
+      <div className="p-6 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 style={{ color: '#FFFFFF', fontSize: '2rem', marginBottom: '0.5rem' }}>Performance Analytics</h1>
+            <p style={{ color: '#FFFFFF' }}>Comprehensive insights into booking trends and performance</p>
+          </div>
+        <Select value={timeRange} onValueChange={(value) => setTimeRange(value as typeof timeRange)}>
           <SelectTrigger className="w-48" style={{ backgroundColor: '#FFFFFF', borderColor: 'rgba(0, 28, 67, 0.2)', color: '#000000' }}>
             <SelectValue />
           </SelectTrigger>
@@ -130,8 +135,13 @@ export function AdminAnalytics() {
             <div className="flex items-center justify-between">
               <div>
                 <p style={{ color: '#627182', fontSize: '0.875rem' }}>Total Bookings</p>
-                <p style={{ color: '#000000', fontSize: '1.5rem' }}>1,213</p>
-                <p className="text-sm mt-1" style={{ color: '#0F51AF' }}>+12.5% vs last period</p>
+                <p style={{ color: '#000000', fontSize: '1.5rem' }}>
+                  {performanceStats?.totalBookings?.value?.toLocaleString() || '0'}
+                </p>
+                <p className="text-sm mt-1" style={{ color: performanceStats?.totalBookings?.changeType === 'increase' ? '#0F51AF' : '#FF4444' }}>
+                  {performanceStats?.totalBookings?.changeType === 'increase' ? '+' : ''}
+                  {performanceStats?.totalBookings?.change?.toFixed(1)}% vs last period
+                </p>
               </div>
               <TrendingUp className="h-8 w-8" style={{ color: '#0F51AF' }} />
             </div>
@@ -142,8 +152,13 @@ export function AdminAnalytics() {
             <div className="flex items-center justify-between">
               <div>
                 <p style={{ color: '#627182', fontSize: '0.875rem' }}>Revenue</p>
-                <p style={{ color: '#000000', fontSize: '1.5rem' }}>R 2.6M</p>
-                <p className="text-sm mt-1" style={{ color: '#0F51AF' }}>+18.2% vs last period</p>
+                <p style={{ color: '#000000', fontSize: '1.5rem' }}>
+                  R {(performanceStats?.revenue?.value || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                </p>
+                <p className="text-sm mt-1" style={{ color: performanceStats?.revenue?.changeType === 'increase' ? '#0F51AF' : '#FF4444' }}>
+                  {performanceStats?.revenue?.changeType === 'increase' ? '+' : ''}
+                  {performanceStats?.revenue?.change?.toFixed(1)}% vs last period
+                </p>
               </div>
               <DollarSign className="h-8 w-8" style={{ color: '#0F51AF' }} />
             </div>
@@ -154,8 +169,13 @@ export function AdminAnalytics() {
             <div className="flex items-center justify-between">
               <div>
                 <p style={{ color: '#627182', fontSize: '0.875rem' }}>Avg Occupancy</p>
-                <p style={{ color: '#000000', fontSize: '1.5rem' }}>84%</p>
-                <p className="text-sm mt-1" style={{ color: '#0F51AF' }}>+5.1% vs last period</p>
+                <p style={{ color: '#000000', fontSize: '1.5rem' }}>
+                  {performanceStats?.avgOccupancy?.value?.toFixed(1) || '0'}%
+                </p>
+                <p className="text-sm mt-1" style={{ color: performanceStats?.avgOccupancy?.changeType === 'increase' ? '#0F51AF' : '#FF4444' }}>
+                  {performanceStats?.avgOccupancy?.changeType === 'increase' ? '+' : ''}
+                  {performanceStats?.avgOccupancy?.change?.toFixed(1)}% vs last period
+                </p>
               </div>
               <Users className="h-8 w-8" style={{ color: '#0F51AF' }} />
             </div>
@@ -166,8 +186,13 @@ export function AdminAnalytics() {
             <div className="flex items-center justify-between">
               <div>
                 <p style={{ color: '#627182', fontSize: '0.875rem' }}>Avg Stay Duration</p>
-                <p style={{ color: '#000000', fontSize: '1.5rem' }}>2.8 nights</p>
-                <p className="text-sm mt-1" style={{ color: '#0F51AF' }}>+0.3 vs last period</p>
+                <p style={{ color: '#000000', fontSize: '1.5rem' }}>
+                  {performanceStats?.avgStayDuration?.value?.toFixed(1) || '0'} nights
+                </p>
+                <p className="text-sm mt-1" style={{ color: performanceStats?.avgStayDuration?.changeType === 'increase' ? '#0F51AF' : '#FF4444' }}>
+                  {performanceStats?.avgStayDuration?.changeType === 'increase' ? '+' : ''}
+                  {performanceStats?.avgStayDuration?.change?.toFixed(1)} vs last period
+                </p>
               </div>
               <CalendarIcon className="h-8 w-8" style={{ color: '#0F51AF' }} />
             </div>
@@ -251,28 +276,12 @@ export function AdminAnalytics() {
             <CardTitle style={{ color: '#000000' }}>Bookings by Room Type</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={roomTypeData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }: { name: string; percent: number }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {roomTypeData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0, 28, 67, 0.2)' }}
-                  labelStyle={{ color: '#000' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            <div className="flex items-center justify-center h-[300px]">
+              <div className="text-center">
+                <p className="text-gray-text mb-2">Room type analytics coming soon</p>
+                <p className="text-gray-text text-sm">Data will be populated from the database</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -283,20 +292,15 @@ export function AdminAnalytics() {
           <CardTitle style={{ color: '#000000' }}>Booking Sources</CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={bookingSourceData} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0, 28, 67, 0.15)" />
-              <XAxis type="number" stroke="#627182" />
-              <YAxis dataKey="source" type="category" stroke="#627182" width={120} />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0, 28, 67, 0.2)' }}
-                labelStyle={{ color: '#000' }}
-              />
-              <Bar dataKey="bookings" fill="#0F51AF" />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="flex items-center justify-center h-[300px]">
+            <div className="text-center">
+              <p className="text-gray-text mb-2">Booking source analytics coming soon</p>
+              <p className="text-gray-text text-sm">Data will be populated from the database</p>
+            </div>
+          </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

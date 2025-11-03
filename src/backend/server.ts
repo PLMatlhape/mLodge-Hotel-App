@@ -21,6 +21,7 @@ import inquiriesRoutes from './routes/inquiries';
 import emailTemplatesRoutes from './routes/emailTemplates';
 import reportsRoutes from './routes/reports';
 import analyticsRoutes from './routes/analytics';
+import auditLogsRoutes from './routes/auditLogs';
 
 dotenv.config();
 
@@ -65,6 +66,12 @@ app.use('/api/bookings', bookingsRoutes);
 app.use('/api/reviews', reviewsRoutes);
 app.use('/api/amenities', amenitiesRoutes);
 app.use('/api/favourites', favouritesRoutes);
+app.use('/api/promo-codes', promoCodesRoutes); // Public promo codes endpoint
+app.use('/api/refunds', refundsRoutes); // Public refunds endpoint
+app.use('/api/inquiries', inquiriesRoutes); // Public inquiries endpoint
+app.use('/api/reports', reportsRoutes); // Public reports endpoint
+app.use('/api/staff', staffRoutes); // Public staff endpoint
+app.use('/api/audit-logs', auditLogsRoutes); // Audit logs endpoint
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/staff', staffRoutes);
 app.use('/api/admin/promo-codes', promoCodesRoutes);

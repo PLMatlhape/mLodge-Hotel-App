@@ -21,10 +21,10 @@ const Booking: React.FC = () => {
   const { isAuthenticated, user } = useAppSelector((state) => state.auth);
   const { loading: bookingLoading } = useAppSelector((state) => state.bookings);
   
-  const [firstName] = useState(user?.name?.split(' ')[0] || 'John');
-  const [lastName] = useState(user?.name?.split(' ')[1] || 'Doe');
-  const [email] = useState(user?.email || 'john.doe@example.com');
-  const [phone] = useState(user?.phone || '+27 123 456 789');
+  const [firstName] = useState(user?.firstName || '');
+  const [lastName] = useState(user?.lastName || '');
+  const [email] = useState(user?.email || '');
+  const [phone] = useState(user?.phone || '');
   const [specialRequests, setSpecialRequests] = useState('');
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -34,7 +34,7 @@ const Booking: React.FC = () => {
   const roomId = parseInt(searchParams.get('roomId') || '0');
   const accommodationId = parseInt(searchParams.get('accommodationId') || '0');
   const roomName = searchParams.get('roomName') || 'Luxury Penthouse';
-  const roomImage = searchParams.get('roomImage') || luxuryPenthouse;
+  const roomImage = searchParams.get('roomImage') || luxuryPenthouse || '/placeholder-room.svg';
   const roomBadge = searchParams.get('roomBadge') || 'Premium';
   const roomLocation = searchParams.get('location') || 'Cape Town';
   const beds = parseInt(searchParams.get('beds') || '3');
@@ -174,13 +174,13 @@ const Booking: React.FC = () => {
                   <div>
                     <p className="text-sm text-gray-500">First Name</p>
                     <p className="text-base text-gray-900">
-                      {firstName || 'Demo'}
+                      {firstName || 'N/A'}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Last Name</p>
                     <p className="text-base text-gray-900">
-                      {lastName || 'User'}
+                      {lastName || 'N/A'}
                     </p>
                   </div>
                 </div>
@@ -188,14 +188,14 @@ const Booking: React.FC = () => {
                 <div>
                   <p className="text-sm text-gray-500">Email</p>
                   <p className="text-base text-gray-900">
-                    {email || 'demo@example.com'}
+                    {email || 'N/A'}
                   </p>
                 </div>
  
                 <div>
                   <p className="text-sm text-gray-500">Phone</p>
                   <p className="text-base text-gray-900">
-                    {phone || '+27987654321'}
+                    {phone || 'N/A'}
                   </p>
                 </div>
  

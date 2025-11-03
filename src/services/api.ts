@@ -184,6 +184,9 @@ export const accommodationsAPI = {
 
 // Rooms API
 export const roomsAPI = {
+  getAll: () =>
+    api.get<Room[]>('/rooms'),
+  
   getByAccommodation: (accommodationId: number, params?: {
     checkIn?: string;
     checkOut?: string;

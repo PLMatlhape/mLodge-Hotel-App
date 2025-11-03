@@ -77,7 +77,7 @@ export function AdminReviewModeration() {
   const flaggedCount = 0; // Flagged feature not implemented yet
 
   return (
-    <div className="relative p-6 space-y-6">
+    <div className="relative p-6 space-y-6 min-h-screen">
       {/* Background Image */}
       <div 
         className="fixed inset-0 bg-cover bg-center"

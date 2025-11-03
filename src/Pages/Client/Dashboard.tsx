@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { logout } from '../../store/slices/authSlice';
-import { fetchAccommodations, selectRoom as selectRoomAction } from '../../store/slices/roomsSlice';
+import { fetchRooms, selectRoom as selectRoomAction } from '../../store/slices/roomsSlice';
 import logo from '../../assets/image/Erxtras/Logo-mLodge-hotel.png';
 import searchIcon from '../../assets/icons/black/black-search-icon.png';
 import filterIcon from '../../assets/icons/black/black-filter-icon.png';
@@ -45,25 +45,34 @@ const Dashboard: React.FC = () => {
 
   // Fetch accommodations on component mount
   useEffect(() => {
-    dispatch(fetchAccommodations({ limit: 50 }));
+    dispatch(fetchRooms());
   }, [dispatch]);
 
   // Transform Redux rooms to match display format
   const rooms = reduxRooms.map((room) => {
     const roomData = room as unknown as Record<string, unknown>;
+    const photos = (roomData.photos as Array<{ url: string; is_primary: boolean }>) || [];
+    const firstPhoto = photos[0]?.url || '/placeholder-room.svg';
+    
     return {
       id: roomData.id as number,
+      accommodation_id: roomData.accommodation_id as number | undefined,
       name: roomData.name as string,
-      location: (roomData.location as string) || (roomData.city as string) || 'Unknown',
+      location: (roomData.location as string) || 'Unknown',
       beds: (roomData.beds as number) || 1,
       baths: (roomData.baths as number) || 1,
-      area: (roomData.size as number) || (roomData.area as number) || 0,
-      guests: (roomData.guests as string) || `upto ${(roomData.capacity as number) || 2} guests`,
-      price: (roomData.price_per_night as number) || (roomData.price as number) || 0,
-      rating: (roomData.rating as number) || 4.5,
-      image: (roomData.image as string) || ((roomData.images as string[])?.[0]) || '',
-      images: (roomData.images as string[]) || ((roomData.image as string) ? [roomData.image as string] : []),
-      badge: (roomData.type as string) || (roomData.badge as string) || 'Standard',
+      area: (roomData.area as number) || 0,
+      capacity: (roomData.capacity as number) || 2,
+      guests: `upto ${(roomData.capacity as number) || 2} guests`,
+      price: (roomData.price_per_night as number) || 0,
+      price_per_night: (roomData.price_per_night as number) || 0,
+      refundable: (roomData.refundable as boolean) || false,
+      rating: 5,
+      image: firstPhoto,
+      images: photos.map(p => p.url),
+      photos: photos,
+      badge: (roomData.type as string) || 'Standard',
+      type: (roomData.type as string) || 'Standard',
       favorite: false
     };
   });
@@ -373,7 +382,7 @@ const Dashboard: React.FC = () => {
               <div className="bg-white rounded-lg p-12 text-center">
                 <p className="text-red-600 mb-4">{error}</p>
                 <button 
-                  onClick={() => dispatch(fetchAccommodations({ limit: 50 }))}
+                  onClick={() => dispatch(fetchRooms())}
                   className="px-6 py-2 bg-[#0F51AF] text-white rounded-lg hover:bg-blue-700"
                 >
                   Retry

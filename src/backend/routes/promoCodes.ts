@@ -4,22 +4,37 @@ import db from '../config/database';
 
 const router = express.Router();
 
-// Get all promo codes
-router.get('/', authenticateToken, requireAdmin, async (req: AuthRequest, res: Response): Promise<void> => {
+// Get all promo codes (public for active codes, admin required for all)
+router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const offset = (page - 1) * limit;
+    const isActive = req.query.isActive === 'true';
 
-    const result = await db.query(
-      `SELECT *
-       FROM promo_codes
-       ORDER BY created_at DESC
-       LIMIT $1 OFFSET $2`,
-      [limit, offset]
-    );
+    // If requesting only active promo codes, allow public access
+    // Otherwise require admin authentication
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    let query = 'SELECT * FROM promo_codes';
+    let countQuery = 'SELECT COUNT(*) as total FROM promo_codes';
+    const queryParams: (string | number)[] = [];
+    
+    if (isActive) {
+      // Public access - only show active promo codes
+      query += ' WHERE is_active = true';
+      countQuery += ' WHERE is_active = true';
+    } else if (!token || token === 'null') {
+      // No token and not requesting active codes - forbidden
+      res.status(403).json({ error: 'Admin authentication required' });
+      return;
+    }
+    
+    query += ' ORDER BY created_at DESC LIMIT $1 OFFSET $2';
+    queryParams.push(limit, offset);
 
-    const countResult = await db.query('SELECT COUNT(*) as total FROM promo_codes');
+    const result = await db.query(query, queryParams);
+    const countResult = await db.query(countQuery);
     const total = parseInt(countResult.rows[0].total);
 
     res.json({

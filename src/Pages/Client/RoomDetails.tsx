@@ -21,17 +21,22 @@ import doneIcon from '../../assets/icons/black/black-doneTick-icon.png';
 interface RoomDetailsProps {
   room: {
     id: number;
+    accommodation_id?: number;
     name: string;
     location?: string;
     beds: number;
-    baths: number;
-    area: number;
+    baths?: number;
+    area?: number;
     guests?: string;
+    capacity?: number;
     price: number;
+    price_per_night?: number;
     rating?: number;
     image: string;
     images?: string[];
+    photos?: Array<{ url: string; is_primary: boolean }>;
     badge: string;
+    type?: string;
     favorite?: boolean;
   };
   onClose: () => void;
@@ -44,14 +49,24 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
   // Get today's date in YYYY-MM-DD format
   const today = new Date().toISOString().split('T')[0];
   
+  // Get room images from photos array or fallback
+  const roomImages = room.photos && room.photos.length > 0 
+    ? room.photos.map(p => p.url) 
+    : (room.images && room.images.length > 0 ? room.images : [room.image]);
+  
+  const firstImage = roomImages[0] || room.image || '/placeholder-room.svg';
+  
   const [checkInDate, setCheckInDate] = useState('');
   const [checkOutDate, setCheckOutDate] = useState('');
-  const [mainImage, setMainImage] = useState(room.image);
+  const [mainImage, setMainImage] = useState(firstImage);
   const [thumbnails, setThumbnails] = useState<string[]>(
-    room.images && room.images.length > 0 
-      ? room.images.slice(0, 3) 
-      : [room.image, room.image, room.image]
+    roomImages.length >= 3 
+      ? roomImages.slice(0, 3) 
+      : [...roomImages, ...Array(3 - roomImages.length).fill(firstImage)]
   );
+  
+  // Get price - use price_per_night if available, otherwise price
+  const roomPrice = room.price_per_night || room.price;
 
   // Handle image swap
   const handleImageSwap = (clickedIndex: number) => {
@@ -88,7 +103,7 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
 
   const nights = calculateNights();
   const serviceFee = 350;
-  const totalPrice = room.price * nights + serviceFee;
+  const totalPrice = roomPrice * nights + serviceFee;
 
   const amenities = [
     { icon: wifiIcon, name: 'Free High-Speed Wi-Fi' },
@@ -137,19 +152,22 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
 
     // Navigate to booking page with all parameters
     const params = new URLSearchParams({
+      roomId: room.id.toString(),
+      accommodationId: (room.accommodation_id || 0).toString(),
       roomName: room.name,
-      roomImage: room.image,
+      roomImage: firstImage,
       roomBadge: room.badge,
       location: room.location || 'Location Not Specified',
       beds: room.beds.toString(),
-      baths: room.baths.toString(),
-      area: room.area.toString(),
+      baths: (room.baths || 1).toString(),
+      area: (room.area || 0).toString(),
       rating: (room.rating || 4.5).toString(),
-      guests: room.guests || 'Not Specified',
+      guests: room.guests || `upto ${room.capacity || 4} guests`,
+      numGuests: (room.capacity || 4).toString(),
       checkInDate: formatDate(checkIn),
       checkOutDate: formatDate(checkOut),
       nights: nights.toString(),
-      pricePerNight: room.price.toString()
+      pricePerNight: roomPrice.toFixed(2)
     });
 
     navigate(`/book?${params.toString()}`);
@@ -247,15 +265,15 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
                   </div>
                   <div className="bg-gray-100 rounded-lg p-4 text-center">
                     <img src={bathIcon} alt="Baths" className="w-8 h-8 mx-auto mb-2" />
-                    <p className="font-semibold text-gray-900">{room.baths} baths</p>
+                    <p className="font-semibold text-gray-900">{room.baths || 1} baths</p>
                   </div>
                   <div className="bg-gray-100 rounded-lg p-4 text-center">
                     <img src={squareIcon} alt="Area" className="w-8 h-8 mx-auto mb-2" />
-                    <p className="font-semibold text-gray-900">120 m²</p>
+                    <p className="font-semibold text-gray-900">{room.area || 120} m²</p>
                   </div>
                   <div className="bg-gray-100 rounded-lg p-4 text-center">
                     <img src={groupIcon} alt="Guests" className="w-8 h-8 mx-auto mb-2" />
-                    <p className="font-semibold text-gray-900">4 Guests</p>
+                    <p className="font-semibold text-gray-900">{room.capacity || 4} Guests</p>
                   </div>
                 </div>
               </div>
@@ -309,7 +327,7 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
 
                 {/* Price Display */}
                 <div className="bg-gray-100 rounded-lg p-4 mb-6">
-                  <p className="text-4xl font-bold text-gray-900">R {room.price}</p>
+                  <p className="text-4xl font-bold text-gray-900">R {roomPrice.toLocaleString()}</p>
                   <p className="text-gray-600">per night</p>
                 </div>
 
@@ -367,8 +385,8 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
                 {/* Price Breakdown */}
                 <div className="space-y-3 mb-6">
                   <div className="flex justify-between text-gray-700">
-                    <span>R{room.price} × {nights} {nights === 1 ? 'night' : 'nights'}</span>
-                    <span className="font-semibold">R{room.price * nights}</span>
+                    <span>R{roomPrice.toLocaleString()} × {nights} {nights === 1 ? 'night' : 'nights'}</span>
+                    <span className="font-semibold">R{(roomPrice * nights).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-gray-700">
                     <span>Service fee</span>
@@ -377,7 +395,7 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
                   <hr />
                   <div className="flex justify-between text-gray-900 text-lg font-bold">
                     <span>Total</span>
-                    <span>R{totalPrice}</span>
+                    <span>R{totalPrice.toLocaleString()}</span>
                   </div>
                 </div>
 

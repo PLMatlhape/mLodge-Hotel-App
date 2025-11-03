@@ -1,8 +1,8 @@
 # mLodge Hotel App - Login Credentials
 
 ## Admin Account
-- **Email**: `Admin@mlodgehotel.co.za`
-- **Password**: `Admin@mlodgehotel`
+- **Email**: `admin@mlodge.com`
+- **Password**: `Admin123`
 - **Dashboard**: http://localhost:5173/admin/overview
 
 ## Test User Account

@@ -1,6 +1,30 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
 // Types
+export interface PerformanceStat {
+  value: number;
+  change: number;
+  changeType: 'increase' | 'decrease';
+}
+
+export interface PerformanceStats {
+  totalBookings: PerformanceStat;
+  revenue: PerformanceStat;
+  avgOccupancy: PerformanceStat;
+  avgStayDuration: PerformanceStat;
+}
+
+export interface RoomTypeData {
+  name: string;
+  value: number;
+  color: string;
+}
+
+export interface BookingSourceData {
+  source: string;
+  bookings: number;
+}
+
 export interface DashboardStats {
   totalBookings: number;
   totalRevenue: number;
@@ -46,6 +70,9 @@ export interface RecentBooking {
 
 interface AnalyticsState {
   dashboardStats: DashboardStats | null;
+  performanceStats: PerformanceStats | null;
+  roomTypeData: RoomTypeData[];
+  bookingSourceData: BookingSourceData[];
   bookingTrends: BookingTrend[];
   revenueTrends: RevenueTrend[];
   roomTypeStats: RoomTypeStats[];
@@ -60,6 +87,9 @@ interface AnalyticsState {
 
 const initialState: AnalyticsState = {
   dashboardStats: null,
+  performanceStats: null,
+  roomTypeData: [],
+  bookingSourceData: [],
   bookingTrends: [],
   revenueTrends: [],
   roomTypeStats: [],
@@ -73,7 +103,7 @@ const initialState: AnalyticsState = {
 };
 
 // API Base URL
-const API_BASE_URL = 'http://localhost:5001/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 // Helper to get auth token
 const getAuthToken = () => {
@@ -179,6 +209,85 @@ export const fetchRevenueTrends = createAsyncThunk(
       return response.json();
     } catch {
       return []; // Return empty array for empty database
+    }
+  }
+);
+
+// Fetch performance statistics
+export const fetchPerformanceStats = createAsyncThunk(
+  'analytics/fetchPerformanceStats',
+  async ({ period = 'year' }: { period?: 'week' | 'month' | 'quarter' | 'year' } = {}) => {
+    try {
+      const token = getAuthToken();
+      const response = await fetch(`${API_BASE_URL}/analytics/performance-stats?period=${period}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (!response.ok) {
+        return {
+          totalBookings: { value: 0, change: 0, changeType: 'increase' as const },
+          revenue: { value: 0, change: 0, changeType: 'increase' as const },
+          avgOccupancy: { value: 0, change: 0, changeType: 'increase' as const },
+          avgStayDuration: { value: 0, change: 0, changeType: 'increase' as const }
+        };
+      }
+      
+      return response.json();
+    } catch {
+      return {
+        totalBookings: { value: 0, change: 0, changeType: 'increase' as const },
+        revenue: { value: 0, change: 0, changeType: 'increase' as const },
+        avgOccupancy: { value: 0, change: 0, changeType: 'increase' as const },
+        avgStayDuration: { value: 0, change: 0, changeType: 'increase' as const }
+      };
+    }
+  }
+);
+
+// Fetch room type distribution
+export const fetchRoomTypeDistribution = createAsyncThunk(
+  'analytics/fetchRoomTypeDistribution',
+  async () => {
+    try {
+      const token = getAuthToken();
+      const response = await fetch(`${API_BASE_URL}/analytics/room-type-distribution`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (!response.ok) {
+        return [];
+      }
+      
+      return response.json();
+    } catch {
+      return [];
+    }
+  }
+);
+
+// Fetch booking sources
+export const fetchBookingSources = createAsyncThunk(
+  'analytics/fetchBookingSources',
+  async () => {
+    try {
+      const token = getAuthToken();
+      const response = await fetch(`${API_BASE_URL}/analytics/booking-sources`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (!response.ok) {
+        return [];
+      }
+      
+      return response.json();
+    } catch {
+      return [];
     }
   }
 );
@@ -323,6 +432,51 @@ const analyticsSlice = createSlice({
       .addCase(fetchRecentBookings.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message || 'Failed to fetch recent bookings';
+      });
+
+    // Fetch performance stats
+    builder
+      .addCase(fetchPerformanceStats.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchPerformanceStats.fulfilled, (state, action) => {
+        state.loading = false;
+        state.performanceStats = action.payload;
+      })
+      .addCase(fetchPerformanceStats.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to fetch performance statistics';
+      });
+
+    // Fetch room type distribution
+    builder
+      .addCase(fetchRoomTypeDistribution.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchRoomTypeDistribution.fulfilled, (state, action) => {
+        state.loading = false;
+        state.roomTypeData = action.payload;
+      })
+      .addCase(fetchRoomTypeDistribution.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to fetch room type distribution';
+      });
+
+    // Fetch booking sources
+    builder
+      .addCase(fetchBookingSources.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchBookingSources.fulfilled, (state, action) => {
+        state.loading = false;
+        state.bookingSourceData = action.payload;
+      })
+      .addCase(fetchBookingSources.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to fetch booking sources';
       });
   },
 });
