@@ -34,11 +34,11 @@ export function AdminAuditLogs() {
   }, [dispatch]);
 
   const filteredLogs = logs.filter(log => {
-    const matchesSearch = 
+    const matchesSearch =
       log.user_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.details.toLowerCase().includes(searchTerm.toLowerCase());
-    
+      (typeof log.details === 'string' ? log.details.toLowerCase().includes(searchTerm.toLowerCase()) : JSON.stringify(log.details).toLowerCase().includes(searchTerm.toLowerCase()));
+
     const matchesModule = filterModule === 'all' || log.module === filterModule;
     const matchesAction = filterAction === 'all' || log.action === filterAction;
 
@@ -171,7 +171,7 @@ export function AdminAuditLogs() {
               <FileSearch className="h-5 w-5 sm:h-6 sm:w-6 text-sky-500" />
               <div>
                 <p className="text-xs sm:text-sm text-gray-text">Today</p>
-                <p className="text-xl sm:text-2xl font-bold text-black">{logs.filter(l => l.timestamp.startsWith('2025-10-19')).length}</p>
+                <p className="text-xl sm:text-2xl font-bold text-black">{logs.filter(l => l.created_at && l.created_at.startsWith(new Date().toISOString().split('T')[0])).length}</p>
               </div>
             </div>
           </CardContent>
@@ -182,7 +182,7 @@ export function AdminAuditLogs() {
               <FileSearch className="h-5 w-5 sm:h-6 sm:w-6 text-orange-500" />
               <div>
                 <p className="text-xs sm:text-sm text-gray-text">Active Users</p>
-                <p className="text-xl sm:text-2xl font-bold text-black">{Array.from(new Set(logs.map(l => l.user))).length}</p>
+                <p className="text-xl sm:text-2xl font-bold text-black">{Array.from(new Set(logs.map(l => l.user_id))).length}</p>
               </div>
             </div>
           </CardContent>
@@ -279,7 +279,7 @@ export function AdminAuditLogs() {
                             </Badge>
                           </td>
                           <td className="py-3 px-4 text-sm text-gray-text capitalize">{log.module.replace('_', ' ')}</td>
-                          <td className="py-3 px-4 text-sm text-black">{log.details}</td>
+                          <td className="py-3 px-4 text-sm text-black">{typeof log.details === 'object' ? JSON.stringify(log.details) : log.details}</td>
                           <td className="py-3 px-4 text-xs sm:text-sm text-gray-text">{log.ip_address || 'N/A'}</td>
                         </tr>
                       );
