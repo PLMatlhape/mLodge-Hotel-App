@@ -15,7 +15,8 @@ router.get('/', authenticateToken, requireAdmin, async (req: AuthRequest, res: R
     let query = `
       SELECT r.*, b.booking_reference, b.total_price as booking_amount,
              u.name as guest_name, u.email as guest_email,
-             acc.name as accommodation_name
+             acc.name as accommodation_name,
+             COALESCE(r.refund_amount, 0) as refund_amount
       FROM refunds r
       JOIN bookings b ON r.booking_id = b.id
       JOIN users u ON b.user_id = u.id
@@ -23,7 +24,7 @@ router.get('/', authenticateToken, requireAdmin, async (req: AuthRequest, res: R
     `;
 
     const params: any[] = [limit, offset];
-    
+
     if (status) {
       query += ' WHERE r.status = $3';
       params.push(status);
@@ -36,7 +37,7 @@ router.get('/', authenticateToken, requireAdmin, async (req: AuthRequest, res: R
     const countQuery = status
       ? 'SELECT COUNT(*) as total FROM refunds WHERE status = $1'
       : 'SELECT COUNT(*) as total FROM refunds';
-    
+
     const countResult = await db.query(
       countQuery,
       status ? [status] : []
@@ -67,7 +68,8 @@ router.get('/:id', authenticateToken, requireAdmin, async (req: AuthRequest, res
     const result = await db.query(
       `SELECT r.*, b.booking_reference, b.total_price as booking_amount,
               u.name as guest_name, u.email as guest_email,
-              acc.name as accommodation_name
+              acc.name as accommodation_name,
+              COALESCE(r.refund_amount, 0) as refund_amount
        FROM refunds r
        JOIN bookings b ON r.booking_id = b.id
        JOIN users u ON b.user_id = u.id
