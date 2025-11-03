@@ -15,12 +15,15 @@ interface Room {
   type?: string;
   price_per_night: number;
   refundable: boolean;
-  photos?: Array<{ url: string; is_primary: boolean }>;
+  quantity?: number;
+  status?: string;
+  photos?: Array<{ url: string; sort_order?: number; is_primary?: boolean }>;
   accommodation_name?: string;
+  accommodation_city?: string;
   amenities?: string[];
   roomFeatures?: string[];
+  room_features?: string[];
   is_active?: boolean;
-  status?: string;
 }
 
 interface Accommodation {

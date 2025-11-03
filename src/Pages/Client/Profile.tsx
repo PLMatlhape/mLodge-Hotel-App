@@ -1,20 +1,74 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAppSelector, useAppDispatch } from '../../store/hooks';
+import { updateUser } from '../../store/slices/authSlice';
+import { usersAPI } from '../../services/api';
 import logo from '../../assets/image/Erxtras/Logo-mLodge-hotel.png';
 import backgroundImage from '../../assets/image/background/Client-Page.jpeg';
 
 const Profile: React.FC = () => {
+  const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
+  
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [profileData, setProfileData] = useState({
-    fullName: 'John Doe',
-    email: 'john.doe@example.com',
-    phone: '+27 123 456 7890',
-    address: '123 Main Street, Cape Town, 8001',
-    dateOfBirth: '1990-01-15',
-    nationality: 'South African'
+    fullName: '',
+    email: '',
+    phone: '',
+    address: '',
+    dateOfBirth: '',
+    nationality: ''
   });
 
   const [formData, setFormData] = useState({ ...profileData });
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login');
+    }
+  }, [isAuthenticated, navigate]);
+
+  // Fetch user profile on component mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await usersAPI.getProfile();
+        const userData = response.data;
+        
+        setProfileData({
+          fullName: userData.name || '',
+          email: userData.email || '',
+          phone: userData.phone || '',
+          address: '', // Not stored in database yet
+          dateOfBirth: '', // Not stored in database yet
+          nationality: '' // Not stored in database yet
+        });
+        setFormData({
+          fullName: userData.name || '',
+          email: userData.email || '',
+          phone: userData.phone || '',
+          address: '',
+          dateOfBirth: '',
+          nationality: ''
+        });
+      } catch (err) {
+        console.error('Error fetching profile:', err);
+        setError('Failed to load profile data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (isAuthenticated) {
+      fetchProfile();
+    }
+  }, [isAuthenticated]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -23,17 +77,57 @@ const Profile: React.FC = () => {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setProfileData({ ...formData });
-    setIsEditing(false);
-    // Here you would typically send the updated data to your backend
+    
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Only update name and phone since backend only supports these fields
+      const response = await usersAPI.updateProfile({
+        name: formData.fullName,
+        phone: formData.phone
+      });
+      
+      // Update local state with saved data
+      setProfileData({ ...formData });
+      
+      // Update Redux store
+      dispatch(updateUser({
+        name: response.data.name,
+        phone: response.data.phone
+      }));
+      
+      setIsEditing(false);
+      
+      // Show success message (you can add a toast notification here)
+      console.log('Profile updated successfully!');
+    } catch (err) {
+      console.error('Error updating profile:', err);
+      setError('Failed to update profile. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCancel = () => {
     setFormData({ ...profileData });
     setIsEditing(false);
+    setError(null);
   };
+
+  // Show loading state
+  if (loading && !profileData.email) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-[#0F51AF] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen relative">
@@ -71,6 +165,26 @@ const Profile: React.FC = () => {
           </Link>
         </header>
 
+        {/* Error Message */}
+        {error && (
+          <div className="max-w-4xl mx-auto px-6 pt-6">
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+              <strong className="font-bold">Error: </strong>
+              <span className="block sm:inline">{error}</span>
+              <button
+                onClick={() => setError(null)}
+                className="absolute top-0 right-0 px-4 py-3"
+                aria-label="Close error message"
+              >
+                <svg className="fill-current h-6 w-6 text-red-500" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                  <title>Close</title>
+                  <path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Main Content */}
         <div className="max-w-4xl mx-auto px-6 py-12">
           <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
@@ -79,12 +193,12 @@ const Profile: React.FC = () => {
               <div className="flex items-center gap-6">
                 {/* Avatar */}
                 <div className="w-32 h-32 rounded-full bg-white flex items-center justify-center text-[#001F3F] text-5xl font-bold">
-                  {profileData.fullName.split(' ').map(n => n[0]).join('')}
+                  {profileData.fullName ? profileData.fullName.split(' ').map(n => n[0]).join('').toUpperCase() : '?'}
                 </div>
                 
                 {/* User Info */}
                 <div className="flex-1">
-                  <h2 className="text-white text-4xl font-bold mb-2">{profileData.fullName}</h2>
+                  <h2 className="text-white text-4xl font-bold mb-2">{profileData.fullName || 'User'}</h2>
                   <p className="text-gray-200 text-lg">{profileData.email}</p>
                   <div className="mt-4">
                     <span className="inline-block bg-[#00CD07] text-white px-4 py-1 rounded-full text-sm font-semibold">
@@ -137,10 +251,11 @@ const Profile: React.FC = () => {
                       id="email"
                       name="email"
                       value={formData.email}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0F51AF]"
-                      required
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed"
+                      disabled
+                      readOnly
                     />
+                    <p className="text-sm text-gray-500 mt-1">Email cannot be changed</p>
                   </div>
 
                   {/* Phone */}
@@ -155,14 +270,13 @@ const Profile: React.FC = () => {
                       value={formData.phone}
                       onChange={handleChange}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0F51AF]"
-                      required
                     />
                   </div>
 
                   {/* Address */}
                   <div>
                     <label htmlFor="address" className="block text-gray-700 font-medium mb-2">
-                      Address
+                      Address <span className="text-sm text-gray-500">(Coming soon)</span>
                     </label>
                     <input
                       type="text"
@@ -170,15 +284,15 @@ const Profile: React.FC = () => {
                       name="address"
                       value={formData.address}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0F51AF]"
-                      required
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0F51AF] bg-gray-50"
+                      disabled
                     />
                   </div>
 
                   {/* Date of Birth */}
                   <div>
                     <label htmlFor="dateOfBirth" className="block text-gray-700 font-medium mb-2">
-                      Date of Birth
+                      Date of Birth <span className="text-sm text-gray-500">(Coming soon)</span>
                     </label>
                     <input
                       type="date"
@@ -186,15 +300,15 @@ const Profile: React.FC = () => {
                       name="dateOfBirth"
                       value={formData.dateOfBirth}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0F51AF]"
-                      required
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0F51AF] bg-gray-50"
+                      disabled
                     />
                   </div>
 
                   {/* Nationality */}
                   <div>
                     <label htmlFor="nationality" className="block text-gray-700 font-medium mb-2">
-                      Nationality
+                      Nationality <span className="text-sm text-gray-500">(Coming soon)</span>
                     </label>
                     <input
                       type="text"
@@ -202,8 +316,8 @@ const Profile: React.FC = () => {
                       name="nationality"
                       value={formData.nationality}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0F51AF]"
-                      required
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0F51AF] bg-gray-50"
+                      disabled
                     />
                   </div>
 
@@ -211,14 +325,23 @@ const Profile: React.FC = () => {
                   <div className="flex gap-4 pt-4">
                     <button
                       type="submit"
-                      className="flex-1 bg-[#0F51AF] text-white py-3 rounded-lg hover:bg-[#0d4291] transition-colors font-medium text-lg"
+                      disabled={loading}
+                      className="flex-1 bg-[#0F51AF] text-white py-3 rounded-lg hover:bg-[#0d4291] transition-colors font-medium text-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
-                      Save Changes
+                      {loading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                          Saving...
+                        </>
+                      ) : (
+                        'Save Changes'
+                      )}
                     </button>
                     <button
                       type="button"
                       onClick={handleCancel}
-                      className="flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-400 transition-colors font-medium text-lg"
+                      disabled={loading}
+                      className="flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-400 transition-colors font-medium text-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Cancel
                     </button>
@@ -230,7 +353,7 @@ const Profile: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <p className="text-gray-600 text-sm font-medium mb-1">Full Name</p>
-                      <p className="text-gray-900 text-lg">{profileData.fullName}</p>
+                      <p className="text-gray-900 text-lg">{profileData.fullName || 'Not set'}</p>
                     </div>
                     
                     <div>
@@ -240,28 +363,30 @@ const Profile: React.FC = () => {
                     
                     <div>
                       <p className="text-gray-600 text-sm font-medium mb-1">Phone Number</p>
-                      <p className="text-gray-900 text-lg">{profileData.phone}</p>
+                      <p className="text-gray-900 text-lg">{profileData.phone || 'Not set'}</p>
                     </div>
                     
                     <div>
                       <p className="text-gray-600 text-sm font-medium mb-1">Date of Birth</p>
-                      <p className="text-gray-900 text-lg">
-                        {new Date(profileData.dateOfBirth).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
+                      <p className="text-gray-500 text-lg italic">
+                        {profileData.dateOfBirth 
+                          ? new Date(profileData.dateOfBirth).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })
+                          : 'Coming soon'}
                       </p>
                     </div>
                     
                     <div>
                       <p className="text-gray-600 text-sm font-medium mb-1">Nationality</p>
-                      <p className="text-gray-900 text-lg">{profileData.nationality}</p>
+                      <p className="text-gray-500 text-lg italic">{profileData.nationality || 'Coming soon'}</p>
                     </div>
                     
                     <div className="md:col-span-2">
                       <p className="text-gray-600 text-sm font-medium mb-1">Address</p>
-                      <p className="text-gray-900 text-lg">{profileData.address}</p>
+                      <p className="text-gray-500 text-lg italic">{profileData.address || 'Coming soon'}</p>
                     </div>
                   </div>
 

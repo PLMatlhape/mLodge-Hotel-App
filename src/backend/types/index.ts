@@ -58,6 +58,9 @@ export interface Booking {
   guest_email: string;
   guest_phone: string;
   special_requests?: string;
+  booking_reference?: string;
+  auto_confirmed?: boolean;
+  message?: string;
   created_at: Date;
   updated_at: Date;
 }

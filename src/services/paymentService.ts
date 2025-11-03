@@ -208,7 +208,7 @@ class PaymentService {
     cardDetails: CreditCardDetails,
     amount: number,
     currency: string = 'ZAR',
-    metadata: PaymentIntent['metadata']
+    _metadata: PaymentIntent['metadata']
   ): Promise<PaymentResult> {
     // Validate card details
     if (!this.validateCardNumber(cardDetails.cardNumber)) {
@@ -282,9 +282,9 @@ class PaymentService {
    * Initialize PayPal payment
    */
   async initializePayPalPayment(
-    amount: number,
-    currency: string = 'ZAR',
-    metadata: PaymentIntent['metadata']
+    _amount: number,
+    _currency: string = 'ZAR',
+    _metadata: PaymentIntent['metadata']
   ): Promise<{ orderId: string; approvalUrl: string }> {
     // In production, this would call PayPal API
     return new Promise((resolve) => {
@@ -409,7 +409,8 @@ class PaymentService {
    * Check if PayPal is available
    */
   isPayPalAvailable(): boolean {
-    return !!this.paypalClientId && this.paypalClientId !== 'paypal_demo_client';
+    // Enable PayPal in demo mode for testing
+    return true;
   }
 
   /**

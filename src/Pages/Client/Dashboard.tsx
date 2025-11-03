@@ -7,12 +7,15 @@ import logo from '../../assets/image/Erxtras/Logo-mLodge-hotel.png';
 import searchIcon from '../../assets/icons/black/black-search-icon.png';
 import filterIcon from '../../assets/icons/black/black-filter-icon.png';
 import starIcon from '../../assets/icons/yellow-star-rate-icon.png';
+import yellowHeartIcon from '../../assets/icons/yellow-heart-icon.png';
 import bathIcon from '../../assets/icons/black/black-bath-icon.png';
 import backgroundImage from '../../assets/image/background/Client-Page.jpeg';
 import RoomDetails from './RoomDetails';
 
 interface Room {
   id: number;
+  accommodation_id?: number;
+  accommodation_city?: string;
   name: string;
   location: string;
   beds: number;
@@ -36,7 +39,7 @@ const Dashboard: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(true);
-  const [priceRange, setPriceRange] = useState([0, 10000]);
+  const [priceRange, setPriceRange] = useState([0, 100000]); // Increased max to 100,000
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [selectedLocation, setSelectedLocation] = useState('All locations');
   const [selectedTier, setSelectedTier] = useState('All Tiers');
@@ -51,13 +54,15 @@ const Dashboard: React.FC = () => {
   // Transform Redux rooms to match display format
   const rooms = reduxRooms.map((room) => {
     const roomData = room as unknown as Record<string, unknown>;
-    const photos = (roomData.photos as Array<{ url: string; is_primary: boolean }>) || [];
+    const photos = (roomData.photos as Array<{ url: string; sort_order?: number }>) || [];
     const firstPhoto = photos[0]?.url || '/placeholder-room.svg';
     
     return {
       id: roomData.id as number,
       accommodation_id: roomData.accommodation_id as number | undefined,
+      accommodation_city: roomData.accommodation_city as string | undefined,
       name: roomData.name as string,
+      description: roomData.description as string | undefined,
       location: (roomData.location as string) || 'Unknown',
       beds: (roomData.beds as number) || 1,
       baths: (roomData.baths as number) || 1,
@@ -73,6 +78,8 @@ const Dashboard: React.FC = () => {
       photos: photos,
       badge: (roomData.type as string) || 'Standard',
       type: (roomData.type as string) || 'Standard',
+      amenities: (roomData.amenities as string[]) || [],
+      roomFeatures: (roomData.room_features as string[]) || [],
       favorite: false
     };
   });
@@ -93,7 +100,8 @@ const Dashboard: React.FC = () => {
     const matchesSearch = room.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          room.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesPrice = room.price >= priceRange[0] && room.price <= priceRange[1];
-    const matchesLocation = selectedLocation === 'All locations' || room.location === selectedLocation;
+    const matchesLocation = selectedLocation === 'All locations' || 
+                           (room.accommodation_city && room.accommodation_city === selectedLocation);
     const matchesTier = selectedTier === 'All Tiers' || room.badge === selectedTier;
     const matchesGuests = !guestCount || parseInt(room.guests.match(/\d+/)?.[0] || '0') >= parseInt(guestCount);
     const matchesFavorites = !showFavoritesOnly || room.favorite;
@@ -172,7 +180,7 @@ const Dashboard: React.FC = () => {
             {menuOpen && (
               <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl overflow-hidden z-50">
                 <button
-                  onClick={() => navigate('/profile')}
+                  onClick={() => isAuthenticated ? navigate('/profile') : navigate('/login')}
                   className="w-full px-4 py-3 text-left text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-3"
                 >
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -266,14 +274,14 @@ const Dashboard: React.FC = () => {
                     </label>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-sm text-gray-600">
-                        <span>R{priceRange[0]}</span>
-                        <span>R{priceRange[1]}</span>
+                        <span>R{priceRange[0].toLocaleString()}</span>
+                        <span>R{priceRange[1].toLocaleString()}</span>
                       </div>
                       <input
                         type="range"
                         min="0"
-                        max="10000"
-                        step="100"
+                        max="100000"
+                        step="1000"
                         value={priceRange[1]}
                         onChange={(e) => setPriceRange([0, parseInt(e.target.value)])}
                         className="w-full accent-[#0F51AF]"
@@ -418,24 +426,18 @@ const Dashboard: React.FC = () => {
                     {/* Favorite */}
                     <button 
                       onClick={() => toggleFavoriteLocal(room.id)}
-                      className={`absolute bottom-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
-                        room.favorite ? 'bg-red-500' : 'bg-white/90 backdrop-blur-sm hover:bg-white'
+                      className={`absolute bottom-3 right-3 w-12 h-12 rounded-full flex items-center justify-center transition-all ${
+                        room.favorite ? 'bg-yellow-500 scale-110' : 'bg-white/90 backdrop-blur-sm hover:bg-white hover:scale-105'
                       }`}
                       aria-label="Add to favorites"
                     >
-                      <svg 
-                        className={`w-5 h-5 ${room.favorite ? 'text-white' : 'text-gray-600'}`}
-                        fill={room.favorite ? 'currentColor' : 'none'}
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path 
-                          strokeLinecap="round" 
-                          strokeLinejoin="round" 
-                          strokeWidth={2} 
-                          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                        />
-                      </svg>
+                      <img 
+                        src={yellowHeartIcon} 
+                        alt="Favorite" 
+                        className={`w-7 h-7 transition-all ${
+                          room.favorite ? 'opacity-100' : 'opacity-60 grayscale'
+                        }`}
+                      />
                     </button>
                   </div>
 

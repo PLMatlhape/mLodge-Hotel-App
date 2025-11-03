@@ -7,6 +7,7 @@ interface SelectContextValue {
   setIsOpen: (open: boolean) => void;
   selectedLabel: string;
   setSelectedLabel: (label: string) => void;
+  triggerRef: React.RefObject<HTMLDivElement | null>;
 }
 
 const SelectContext = React.createContext<SelectContextValue | undefined>(undefined);
@@ -15,6 +16,7 @@ export const Select = ({ children, value, onValueChange }: { children: React.Rea
   const [isOpen, setIsOpen] = useState(false);
   const [selectedLabel, setSelectedLabel] = useState('');
   const selectRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
 
   // Update selected label when value changes from parent
   useEffect(() => {
@@ -43,7 +45,7 @@ export const Select = ({ children, value, onValueChange }: { children: React.Rea
   }, []);
 
   return (
-    <SelectContext.Provider value={{ value, onValueChange, isOpen, setIsOpen, selectedLabel, setSelectedLabel }}>
+    <SelectContext.Provider value={{ value, onValueChange, isOpen, setIsOpen, selectedLabel, setSelectedLabel, triggerRef }}>
       <div className="relative" ref={selectRef}>
         {children}
       </div>
@@ -57,6 +59,8 @@ export const SelectTrigger = ({ children, style, className = '' }: { children: R
 
   return (
     <div
+      ref={context.triggerRef}
+      role="button"
       className={`w-full px-3 py-2 border rounded-md cursor-pointer flex items-center justify-between ${className}`}
       style={style}
       onClick={() => context.setIsOpen(!context.isOpen)}
@@ -86,12 +90,39 @@ export const SelectValue = ({ placeholder = 'Select...' }: { placeholder?: strin
 
 export const SelectContent = ({ children, style, className = '' }: { children: React.ReactNode; style?: React.CSSProperties; className?: string }) => {
   const context = React.useContext(SelectContext);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState<{ top: number; left: number; width: number } | null>(null);
+
   if (!context) throw new Error('SelectContent must be used within Select');
+
+  // Calculate position when dropdown opens
+  useEffect(() => {
+    if (context.isOpen && context.triggerRef.current) {
+      const rect = context.triggerRef.current.getBoundingClientRect();
+      const newPosition = {
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+        width: rect.width
+      };
+      console.log('🔽 Dropdown opened at position:', newPosition);
+      console.log('🔽 Trigger rect:', rect);
+      setPosition(newPosition);
+    }
+  }, [context.isOpen, context.triggerRef]);
 
   if (!context.isOpen) return null;
 
   return (
-    <div className={`absolute z-50 mt-1 w-full bg-white border rounded-md shadow-lg max-h-60 overflow-auto ${className}`} style={style}>
+    <div 
+      ref={contentRef}
+      className={`fixed z-[9999] bg-white border rounded-md shadow-lg max-h-60 overflow-auto ${className}`} 
+      style={{
+        ...style,
+        top: position?.top || 0,
+        left: position?.left || 0,
+        width: position?.width || 'auto'
+      }}
+    >
       {React.Children.map(children, child => {
         if (React.isValidElement(child)) {
           return React.cloneElement(child, { 

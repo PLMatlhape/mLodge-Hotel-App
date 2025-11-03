@@ -90,12 +90,16 @@ CREATE TABLE IF NOT EXISTS public.bookings
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now(),
     deleted_at timestamp without time zone,
+    source character varying(50) COLLATE pg_catalog."default" DEFAULT 'Website'::character varying,
     CONSTRAINT bookings_pkey PRIMARY KEY (id),
     CONSTRAINT bookings_booking_reference_key UNIQUE (booking_reference)
 );
 
 COMMENT ON TABLE public.bookings
     IS 'Customer reservations';
+
+COMMENT ON COLUMN public.bookings.source
+    IS 'Source of the booking: Website, Mobile App, Phone, Walk-in, etc.';
 
 CREATE TABLE IF NOT EXISTS public.change_audit_logs
 (
@@ -226,17 +230,6 @@ CREATE TABLE IF NOT EXISTS public.payments
 
 COMMENT ON TABLE public.payments
     IS 'Payment transactions';
-
-CREATE TABLE IF NOT EXISTS public.photos
-(
-    id serial NOT NULL,
-    accommodation_id integer NOT NULL,
-    url text COLLATE pg_catalog."default" NOT NULL,
-    caption text COLLATE pg_catalog."default",
-    sort_order integer DEFAULT 0,
-    created_at timestamp with time zone DEFAULT now(),
-    CONSTRAINT photos_pkey PRIMARY KEY (id)
-);
 
 CREATE TABLE IF NOT EXISTS public.policies
 (
@@ -373,7 +366,7 @@ CREATE TABLE IF NOT EXISTS public.room_photos
 CREATE TABLE IF NOT EXISTS public.rooms
 (
     id serial NOT NULL,
-    accommodation_id integer NOT NULL,
+    accommodation_id integer,
     name character varying(100) COLLATE pg_catalog."default" NOT NULL,
     description text COLLATE pg_catalog."default",
     capacity integer NOT NULL DEFAULT 2,
@@ -383,12 +376,44 @@ CREATE TABLE IF NOT EXISTS public.rooms
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now(),
     deleted_at timestamp without time zone,
+    location character varying(500) COLLATE pg_catalog."default",
+    baths integer DEFAULT 2,
+    area integer DEFAULT 120,
+    type character varying(50) COLLATE pg_catalog."default" DEFAULT 'Standard'::character varying,
+    amenities jsonb DEFAULT '[]'::jsonb,
+    room_features jsonb DEFAULT '[]'::jsonb,
+    quantity integer DEFAULT 10,
+    status character varying(20) COLLATE pg_catalog."default" DEFAULT 'available'::character varying,
     CONSTRAINT rooms_pkey PRIMARY KEY (id),
     CONSTRAINT unique_room_name_per_accommodation UNIQUE (accommodation_id, name)
 );
 
 COMMENT ON TABLE public.rooms
     IS 'Room types and pricing';
+
+COMMENT ON COLUMN public.rooms.location
+    IS 'Full address/location of the room';
+
+COMMENT ON COLUMN public.rooms.baths
+    IS 'Number of bathrooms';
+
+COMMENT ON COLUMN public.rooms.area
+    IS 'Area in square meters';
+
+COMMENT ON COLUMN public.rooms.type
+    IS 'Room type: Standard, Deluxe, Premium, Suite';
+
+COMMENT ON COLUMN public.rooms.amenities
+    IS 'Array of amenity names (e.g., WiFi, Parking)';
+
+COMMENT ON COLUMN public.rooms.room_features
+    IS 'Array of room feature descriptions';
+
+COMMENT ON COLUMN public.rooms.quantity
+    IS 'Number of units available for this room type';
+
+COMMENT ON COLUMN public.rooms.status
+    IS 'Room status: available, unavailable, maintenance';
 
 CREATE TABLE IF NOT EXISTS public.user_tokens
 (
@@ -561,13 +586,6 @@ ALTER TABLE IF EXISTS public.payments
     REFERENCES public.users (id) MATCH SIMPLE
     ON UPDATE NO ACTION
     ON DELETE NO ACTION;
-
-
-ALTER TABLE IF EXISTS public.photos
-    ADD CONSTRAINT photos_accommodation_id_fkey FOREIGN KEY (accommodation_id)
-    REFERENCES public.accommodations (id) MATCH SIMPLE
-    ON UPDATE NO ACTION
-    ON DELETE CASCADE;
 
 
 ALTER TABLE IF EXISTS public.policies

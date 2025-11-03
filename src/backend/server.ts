@@ -36,11 +36,16 @@ app.use(cors({
   credentials: true,
 }));
 
-// Rate limiting
+// Rate limiting - More generous limits for image uploads
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 500, // Increased limit to 500 requests per windowMs (was 100)
   message: 'Too many requests from this IP, please try again later.',
+  // Skip rate limiting for certain paths
+  skip: (req) => {
+    // Skip rate limiting for room updates (which include image uploads)
+    return req.path.includes('/api/rooms/') && req.method === 'PUT';
+  },
 });
 app.use(limiter);
 
@@ -100,9 +105,9 @@ app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// Start server - Force localhost IPv4
+// Start server - Bind to all interfaces (0.0.0.0) to accept connections from IPv4 and IPv6
 console.log('🔄 Attempting to start server...');
-const server = app.listen(PORT, 'localhost', () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   const addr = server.address();
   console.log(`✅ Server successfully bound to port ${PORT}`);
   console.log(`🚀 Server running on port ${PORT}`);

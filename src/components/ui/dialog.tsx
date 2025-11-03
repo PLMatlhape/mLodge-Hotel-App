@@ -3,8 +3,15 @@ import React from 'react';
 export const Dialog = ({ children, open, onOpenChange }: { children: React.ReactNode; open: boolean; onOpenChange: (open: boolean) => void }) => (
   <>
     {open && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => onOpenChange(false)}>
-        <div onClick={(e) => e.stopPropagation()}>
+      <div className="fixed inset-0 z-50 bg-black/50" onClick={() => onOpenChange(false)}>
+        <div 
+          className="fixed top-1/2" 
+          style={{ 
+            left: '240px', // Start at sidebar end
+            transform: 'translateY(-50%)' // Center vertically only
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
           {children}
         </div>
       </div>

@@ -21,20 +21,23 @@ const Booking: React.FC = () => {
   const { isAuthenticated, user } = useAppSelector((state) => state.auth);
   const { loading: bookingLoading } = useAppSelector((state) => state.bookings);
   
-  const [firstName] = useState(user?.firstName || '');
-  const [lastName] = useState(user?.lastName || '');
+  // Extract user information with proper fallbacks
+  const userName = user?.name || '';
+  const nameParts = userName.split(' ');
+  const [firstName] = useState(nameParts[0] || '');
+  const [lastName] = useState(nameParts.slice(1).join(' ') || '');
   const [email] = useState(user?.email || '');
   const [phone] = useState(user?.phone || '');
   const [specialRequests, setSpecialRequests] = useState('');
   const [agreeToTerms, setAgreeToTerms] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
  
   // Get booking details from URL parameters
   const roomId = parseInt(searchParams.get('roomId') || '0');
   const accommodationId = parseInt(searchParams.get('accommodationId') || '0');
   const roomName = searchParams.get('roomName') || 'Luxury Penthouse';
-  const roomImage = searchParams.get('roomImage') || luxuryPenthouse || '/placeholder-room.svg';
+  // Get room image from sessionStorage (avoids URL length limit with base64 data)
+  const roomImage = sessionStorage.getItem('bookingRoomImage') || luxuryPenthouse || '/placeholder-room.svg';
   const roomBadge = searchParams.get('roomBadge') || 'Premium';
   const roomLocation = searchParams.get('location') || 'Cape Town';
   const beds = parseInt(searchParams.get('beds') || '3');
@@ -57,6 +60,13 @@ const Booking: React.FC = () => {
     window.scrollTo(0, 0);
   }, []);
   
+  // Cleanup sessionStorage when component unmounts
+  useEffect(() => {
+    return () => {
+      sessionStorage.removeItem('bookingRoomImage');
+    };
+  }, []);
+  
   // Check authentication on mount
   useEffect(() => {
     if (!isAuthenticated) {
@@ -70,64 +80,104 @@ const Booking: React.FC = () => {
   if (!isAuthenticated) {
     return null;
   }
- 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!agreeToTerms) {
-      toast.error('Please agree to the terms and conditions to proceed.');
-      return;
-    }
-
-    // Validate required fields
-    if (!roomId || !accommodationId) {
-      toast.error('Missing booking information. Please select a room again.');
-      return;
-    }
-
-    setIsProcessing(true);
-  };
 
   const handlePaymentSuccess = async (transactionId: string) => {
     try {
       // Convert dates to YYYY-MM-DD format for backend
       const formatDate = (dateStr: string) => {
         const date = new Date(dateStr);
-        return date.toISOString().split('T')[0];
+        if (isNaN(date.getTime())) {
+          throw new Error('Invalid date format');
+        }
+        // Use local date parts to avoid timezone shifts
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
       };
 
-      const bookingData = {
-        accommodation_id: accommodationId,
+      // Validate all required data
+      if (!accommodationId || !roomId) {
+        throw new Error('Missing accommodation or room information');
+      }
+
+      if (!firstName || !lastName || !email) {
+        throw new Error('Missing guest information. Please update your profile.');
+      }
+
+      // Build booking data with only defined values
+      const bookingData: any = {
+        accommodation_id: Number(accommodationId),
         check_in_date: formatDate(checkInDate),
         check_out_date: formatDate(checkOutDate),
-        rooms: [{ room_id: roomId, quantity: 1 }],
+        rooms: [{ room_id: Number(roomId), quantity: 1 }],
         guest_name: `${firstName} ${lastName}`,
         guest_email: email,
-        guest_phone: phone,
-        num_adults: numGuests,
+        num_adults: Number(numGuests) || 1,
         num_children: 0,
-        special_requests: specialRequests || undefined,
       };
 
-      await dispatch(createBooking(bookingData)).unwrap();
+      // Only add optional fields if they have valid values
+      if (phone && phone.trim()) {
+        bookingData.guest_phone = phone.trim();
+      }
       
-      toast.success(`Booking confirmed! Transaction ID: ${transactionId}`);
+      if (specialRequests && specialRequests.trim()) {
+        bookingData.special_requests = specialRequests.trim();
+      }
+
+      console.log('Creating booking with data:', bookingData);
+      console.log('Check-in date:', checkInDate, '→', bookingData.check_in_date);
+      console.log('Check-out date:', checkOutDate, '→', bookingData.check_out_date);
+      console.log('Guest email:', email, 'Type:', typeof email);
+      console.log('Room ID:', roomId, 'Type:', typeof bookingData.rooms[0].room_id);
+      console.log('Accommodation ID:', accommodationId, 'Type:', typeof bookingData.accommodation_id);
+
+      const result = await dispatch(createBooking(bookingData)).unwrap();
+      
+      console.log('Booking created successfully:', result);
+      
+      // Show appropriate message based on auto-confirmation status
+      if (result.auto_confirmed) {
+        toast.success(`🎉 Booking automatically confirmed! Your room is reserved. Reference: ${result.booking_reference || transactionId}`);
+      } else {
+        toast.success(`Booking received! Pending confirmation. Reference: ${result.booking_reference || transactionId}`);
+      }
       
       // Navigate to bookings page or dashboard after a short delay
       setTimeout(() => {
         navigate('/dashboard');
-      }, 1500);
+      }, 2000);
     } catch (error) {
       console.error('Booking error:', error);
-      toast.error('Failed to create booking. Please contact support with your transaction ID: ' + transactionId);
-    } finally {
-      setIsProcessing(false);
+      
+      // Extract error message from different error formats
+      let errorMessage = 'An unknown error occurred';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'object' && error !== null) {
+        // Handle Redux async thunk error
+        const err = error as any;
+        if (err?.errors && Array.isArray(err.errors)) {
+          // Handle validation errors from express-validator
+          const validationErrors = err.errors.map((e: any) => `${e.param}: ${e.msg}`).join(', ');
+          errorMessage = `Validation failed: ${validationErrors}`;
+          console.error('Validation errors:', err.errors);
+          
+          // Show detailed validation errors
+          toast.error(`Validation Error: ${validationErrors}`);
+          return; // Exit early to avoid showing generic error
+        } else {
+          errorMessage = err.message || err.error || JSON.stringify(error);
+        }
+      }
+      
+      toast.error(`Failed to create booking: ${errorMessage}. Please contact support with your transaction ID: ${transactionId}`);
     }
   };
 
   const handlePaymentError = (error: string) => {
     console.error('Payment error:', error);
-    setIsProcessing(false);
   };
 
   const toggleFavorite = () => {
@@ -217,9 +267,32 @@ const Booking: React.FC = () => {
  
             {/* Payment Form Component */}
             <div className="bg-white rounded-2xl sm:rounded-3xl border-2 border-[#001C43] p-4 sm:p-6">
+              {/* Terms and Conditions - Moved inside payment card */}
+              <div className="flex items-start gap-3 mb-4 p-4 bg-gray-50 rounded-lg">
+                <input
+                  type="checkbox"
+                  id="terms"
+                  checked={agreeToTerms}
+                  onChange={(e) => setAgreeToTerms(e.target.checked)}
+                  className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <label htmlFor="terms" className="text-sm text-gray-700 cursor-pointer">
+                  I agree to the{' '}
+                  <button 
+                    type="button"
+                    onClick={() => navigate('/terms')}
+                    className="text-blue-600 underline hover:text-blue-800"
+                  >
+                    terms and conditions
+                  </button>
+                  {' '}and cancellation policy
+                </label>
+              </div>
+
               <PaymentForm
                 amount={totalPrice}
                 currency="R"
+                agreeToTerms={agreeToTerms}
                 metadata={{
                   bookingId: undefined,
                   userId: user?.id?.toString(),
@@ -231,54 +304,8 @@ const Booking: React.FC = () => {
               />
             </div>
  
-            {/* Terms and Conditions */}
-            <div className="flex items-start gap-3 px-2">
-              <input
-                type="checkbox"
-                id="terms"
-                checked={agreeToTerms}
-                onChange={(e) => setAgreeToTerms(e.target.checked)}
-                className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <label htmlFor="terms" className="text-sm text-white cursor-pointer">
-                I agree to the{' '}
-                <button 
-                  type="button"
-                  onClick={() => navigate('/terms')}
-                  className="text-blue-300 underline hover:text-blue-200"
-                >
-                  terms and conditions
-                </button>
-                {' '}and cancellation policy
-              </label>
-            </div>
- 
-            {/* Pay Button */}
-            <button
-              type="submit"
-              onClick={handleSubmit}
-              disabled={!agreeToTerms || isProcessing || bookingLoading}
-              className="w-full bg-[#0F51AF] text-white py-3 sm:py-4 rounded-lg font-semibold text-base sm:text-lg hover:bg-[#0045b0] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {isProcessing || bookingLoading ? (
-                <>
-                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  <span>Processing...</span>
-                </>
-              ) : (
-                <>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                  Pay R {totalPrice.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </>
-              )}
-            </button>
- 
-            <p className="text-center text-xs text-gray-300 flex items-center justify-center gap-2">
+            {/* Security Notice */}
+            <p className="text-center text-xs text-gray-300 flex items-center justify-center gap-2 px-2">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>

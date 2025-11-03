@@ -37,10 +37,7 @@ router.get('/', optionalAuth, async (req: AuthRequest, res: Response): Promise<v
         a.country,
         a.star_rating,
         a.base_currency,
-        a.created_at,
-        (SELECT json_agg(p.url) FROM photos p WHERE p.accommodation_id = a.id) as photos,
-        (SELECT COALESCE(AVG(r.rating), 0) FROM reviews r WHERE r.accommodation_id = a.id) as avg_rating,
-        (SELECT COUNT(*) FROM reviews r WHERE r.accommodation_id = a.id) as review_count
+        a.created_at
       FROM accommodations a
       WHERE a.is_active = true
     `;
@@ -63,7 +60,12 @@ router.get('/', optionalAuth, async (req: AuthRequest, res: Response): Promise<v
     queryText += ` ORDER BY a.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
     params.push(limitNum, offset);
 
+    console.log('🔍 Executing accommodations query:', queryText);
+    console.log('📊 Query params:', params);
+    
     const result = await db.query(queryText, params);
+    
+    console.log('✅ Query returned', result.rows.length, 'accommodations');
 
     // Get total count for pagination
     let countQuery = 'SELECT COUNT(*) as total FROM accommodations a WHERE a.is_active = true';
@@ -84,21 +86,11 @@ router.get('/', optionalAuth, async (req: AuthRequest, res: Response): Promise<v
     const countResult = await db.query(countQuery, countParams);
     const total = parseInt(countResult.rows[0].total);
 
-    // If user is authenticated, check favorites
-    let accommodations = result.rows;
-    if (req.user) {
-      const favResult = await db.query(
-        'SELECT accommodation_id FROM favourites WHERE user_id = $1',
-        [req.user.id]
-      );
-      const favoriteIds = favResult.rows.map((row) => row.accommodation_id);
-      
-      accommodations = accommodations.map((acc) => ({
-        ...acc,
-        is_favorite: favoriteIds.includes(acc.id)
-      }));
-    }
+    // Return accommodations without favorites check for now (can be added later if needed)
+    const accommodations = result.rows;
 
+    console.log('📤 Returning', accommodations.length, 'accommodations to client');
+    
     res.json({
       success: true,
       count: accommodations.length,
@@ -111,7 +103,8 @@ router.get('/', optionalAuth, async (req: AuthRequest, res: Response): Promise<v
       }
     });
   } catch (error) {
-    console.error('Get accommodations error:', error);
+    console.error('❌ Get accommodations error:', error);
+    console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     res.status(500).json({ 
       success: false, 
       message: 'Failed to fetch accommodations' 

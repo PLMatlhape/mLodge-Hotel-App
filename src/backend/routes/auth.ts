@@ -1,6 +1,6 @@
 import express, { Response } from 'express';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import db from '../config/database';
@@ -51,10 +51,12 @@ router.post(
       const user = result.rows[0];
 
       // Generate JWT token
+      const jwtSecret = process.env.JWT_SECRET || 'fallback-secret';
+      const signOptions: SignOptions = { expiresIn: '7d' };
       const token = jwt.sign(
         { userId: user.id },
-        process.env.JWT_SECRET || 'fallback-secret',
-        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+        jwtSecret,
+        signOptions
       );
 
       res.status(201).json({ token, user });
@@ -112,10 +114,12 @@ router.post(
       await db.query('UPDATE users SET updated_at = NOW() WHERE id = $1', [user.id]);
 
       // Generate JWT token
+      const jwtSecret = process.env.JWT_SECRET || 'fallback-secret';
+      const signOptions: SignOptions = { expiresIn: '7d' };
       const token = jwt.sign(
         { userId: user.id },
-        process.env.JWT_SECRET || 'fallback-secret',
-        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+        jwtSecret,
+        signOptions
       );
 
       // Remove password from response
