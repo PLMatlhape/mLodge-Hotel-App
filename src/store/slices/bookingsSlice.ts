@@ -3,23 +3,23 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import { bookingsAPI } from '../../services/api';
 
 interface Booking {
-  id: string;
-  roomId: number;
-  roomName: string;
-  roomImage: string;
-  checkInDate: string;
-  checkOutDate: string;
-  nights: number;
-  pricePerNight: number;
-  totalPrice: number;
-  guestInfo: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-  };
+  id: number;
+  user_id: number;
+  accommodation_id: number;
+  check_in_date: string;
+  check_out_date: string;
+  num_adults: number;
+  num_children: number;
+  total_amount: number;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'rejected';
-  createdAt: string;
+  guest_name: string;
+  guest_email: string;
+  guest_phone: string;
+  special_requests?: string;
+  accommodation_name?: string;
+  accommodation_city?: string;
+  rooms?: { room_id: number; room_name: string; quantity: number; price_per_night: number }[];
+  created_at: string;
 }
 
 interface BookingsState {
@@ -41,7 +41,8 @@ export const fetchMyBookings = createAsyncThunk(
   'bookings/fetchMyBookings',
   async () => {
     const response = await bookingsAPI.getMyBookings();
-    return response.data;
+    // Backend returns { bookings: [...], pagination: {...} }
+    return response.data.bookings || [];
   }
 );
 
@@ -102,13 +103,13 @@ const bookingsSlice = createSlice({
     setCurrentBooking: (state, action: PayloadAction<Booking | null>) => {
       state.currentBooking = action.payload;
     },
-    updateBookingStatus: (state, action: PayloadAction<{ id: string; status: Booking['status'] }>) => {
+    updateBookingStatus: (state, action: PayloadAction<{ id: number; status: Booking['status'] }>) => {
       const booking = state.bookings.find(b => b.id === action.payload.id);
       if (booking) {
         booking.status = action.payload.status;
       }
     },
-    cancelBooking: (state, action: PayloadAction<string>) => {
+    cancelBooking: (state, action: PayloadAction<number>) => {
       const booking = state.bookings.find(b => b.id === action.payload);
       if (booking) {
         booking.status = 'cancelled';
