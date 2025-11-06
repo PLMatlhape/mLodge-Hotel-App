@@ -16,10 +16,10 @@ import deluxeOcean from '../../assets/image/dashboard/Deluxe Ocean View.jpeg';
 import executiveBusiness from '../../assets/image/dashboard/Executive-business-room.jpeg';
 
 const mockRooms = [
-  { id: 1, name: 'Luxury Penthouse', type: 'Premium', price: 8000, location: 'Cape Town', beds: 2, guests: 4, size: 120, available: true, amenities: ['WiFi', 'TV', 'Air Conditioning', 'Mini Bar', 'Ocean View'], image: luxuryPenthouse, rating: 5 },
-  { id: 2, name: 'Executive Suite', type: 'Deluxe', price: 4000, location: 'Johannesburg', beds: 1, guests: 2, size: 75, available: true, amenities: ['WiFi', 'TV', 'Air Conditioning', 'Work Desk'], image: executiveBusiness, rating: 4.6 },
-  { id: 3, name: 'Standard Room', type: 'Standard', price: 1200, location: 'Durban', beds: 1, guests: 2, size: 40, available: true, amenities: ['WiFi', 'TV'], image: deluxeOcean, rating: 4.2 },
-  { id: 4, name: 'Deluxe Ocean View', type: 'Deluxe', price: 5000, location: 'Durban', beds: 1, guests: 2, size: 85, available: false, amenities: ['WiFi', 'TV', 'Air Conditioning', 'Balcony', 'Ocean View'], image: deluxeOcean, rating: 4.9 },
+  { id: 1, name: 'Luxury Penthouse', type: 'Premium', price: 8000, location: 'Cape Town', beds: 2, guests: 4, size: 120, available: true, amenities: ['WiFi', 'TV', 'Air Conditioning', 'Mini Bar', 'Ocean View'], image: luxuryPenthouse, images: [luxuryPenthouse, deluxeOcean, executiveBusiness], rating: 5, baths: 2 },
+  { id: 2, name: 'Executive Suite', type: 'Deluxe', price: 4000, location: 'Johannesburg', beds: 1, guests: 2, size: 75, available: true, amenities: ['WiFi', 'TV', 'Air Conditioning', 'Work Desk'], image: executiveBusiness, images: [executiveBusiness, luxuryPenthouse, deluxeOcean], rating: 4.6, baths: 1 },
+  { id: 3, name: 'Standard Room', type: 'Standard', price: 1200, location: 'Durban', beds: 1, guests: 2, size: 40, available: true, amenities: ['WiFi', 'TV'], image: deluxeOcean, images: [deluxeOcean, executiveBusiness, luxuryPenthouse], rating: 4.2, baths: 1 },
+  { id: 4, name: 'Deluxe Ocean View', type: 'Deluxe', price: 5000, location: 'Durban', beds: 1, guests: 2, size: 85, available: false, amenities: ['WiFi', 'TV', 'Air Conditioning', 'Balcony', 'Ocean View'], image: deluxeOcean, images: [deluxeOcean, luxuryPenthouse, executiveBusiness], rating: 4.9, baths: 1 },
 ];
 
 const amenitiesList = ['WiFi', 'TV', 'Air Conditioning', 'Mini Bar', 'Ocean View', 'Balcony', 'Work Desk', 'Kitchen', 'Washing Machine', 'Pool Access'];
@@ -28,16 +28,20 @@ export function AdminInventory() {
   const [rooms, setRooms] = useState(mockRooms);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRoom, setEditingRoom] = useState<typeof mockRooms[0] | null>(null);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     type: 'Standard',
     price: '',
     location: 'Cape Town',
     beds: '1',
+    baths: '1',
     guests: '2',
     size: '',
+    rating: '4.5',
     available: true,
     amenities: [] as string[],
+    images: [] as string[],
   });
 
   const handleOpenDialog = (room?: typeof mockRooms[0]) => {
@@ -49,11 +53,15 @@ export function AdminInventory() {
         price: room.price.toString(),
         location: room.location,
         beds: room.beds.toString(),
+        baths: room.baths.toString(),
         guests: room.guests.toString(),
         size: room.size.toString(),
+        rating: room.rating.toString(),
         available: room.available,
         amenities: room.amenities,
+        images: room.images || [room.image],
       });
+      setImagePreviews(room.images || [room.image]);
     } else {
       setEditingRoom(null);
       setFormData({
@@ -62,11 +70,15 @@ export function AdminInventory() {
         price: '',
         location: 'Cape Town',
         beds: '1',
+        baths: '1',
         guests: '2',
         size: '',
+        rating: '4.5',
         available: true,
         amenities: [],
+        images: [],
       });
+      setImagePreviews([]);
     }
     setIsDialogOpen(true);
   };
@@ -74,6 +86,11 @@ export function AdminInventory() {
   const handleSaveRoom = () => {
     if (!formData.name || !formData.price || !formData.size) {
       toast.error('Please fill in all required fields');
+      return;
+    }
+
+    if (formData.images.length === 0) {
+      toast.error('Please upload at least one image');
       return;
     }
 
@@ -87,10 +104,14 @@ export function AdminInventory() {
               price: parseInt(formData.price),
               location: formData.location,
               beds: parseInt(formData.beds),
+              baths: parseInt(formData.baths),
               guests: parseInt(formData.guests),
               size: parseInt(formData.size),
+              rating: parseFloat(formData.rating),
               available: formData.available,
               amenities: formData.amenities,
+              image: formData.images[0],
+              images: formData.images,
             } 
           : r
       ));
@@ -103,12 +124,14 @@ export function AdminInventory() {
         price: parseInt(formData.price),
         location: formData.location,
         beds: parseInt(formData.beds),
+        baths: parseInt(formData.baths),
         guests: parseInt(formData.guests),
         size: parseInt(formData.size),
+        rating: parseFloat(formData.rating),
         available: formData.available,
         amenities: formData.amenities,
-        image: luxuryPenthouse, // Default image for new rooms
-        rating: 4.5, // Default rating for new rooms
+        image: formData.images[0],
+        images: formData.images,
       };
       setRooms([...rooms, newRoom]);
       toast.success('Room added successfully');
@@ -128,6 +151,48 @@ export function AdminInventory() {
         ? formData.amenities.filter(a => a !== amenity)
         : [...formData.amenities, amenity],
     });
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const newImages: string[] = [];
+    let filesProcessed = 0;
+
+    Array.from(files).forEach((file) => {
+      // Check if file is an image
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please upload only image files');
+        return;
+      }
+      
+      // Check file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Each image should be less than 5MB');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const imageUrl = reader.result as string;
+        newImages.push(imageUrl);
+        filesProcessed++;
+
+        if (filesProcessed === files.length) {
+          const updatedImages = [...formData.images, ...newImages];
+          setFormData({ ...formData, images: updatedImages });
+          setImagePreviews(updatedImages);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleRemoveImage = (index: number) => {
+    const updatedImages = formData.images.filter((_, i) => i !== index);
+    setFormData({ ...formData, images: updatedImages });
+    setImagePreviews(updatedImages);
   };
 
   const getBadgeColor = (type: string) => {
@@ -278,6 +343,12 @@ export function AdminInventory() {
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M21 10h-2V4.5C19 3.12 17.88 2 16.5 2S14 3.12 14 4.5V6H9V4.5C9 3.12 7.88 2 6.5 2S4 3.12 4 4.5V10H2v2h2v10h16V12h2v-2zM6 4.5c0-.28.22-.5.5-.5s.5.22.5.5V10H6V4.5zm10 0c0-.28.22-.5.5-.5s.5.22.5.5V10h-1V4.5zM6 20v-8h12v8H6z"/>
                   </svg>
+                  {room.baths}
+                </div>
+                <div className="flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                  </svg>
                   {room.guests}
                 </div>
                 <div className="flex items-center gap-1">
@@ -398,6 +469,17 @@ export function AdminInventory() {
                 />
               </div>
               <div>
+                <Label className="text-black">Baths *</Label>
+                <Input
+                  type="number"
+                  value={formData.baths}
+                  onChange={(e) => setFormData({ ...formData, baths: e.target.value })}
+                  className="bg-white border-gray-300 text-black"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
                 <Label className="text-black">Max Guests *</Label>
                 <Input
                   type="number"
@@ -406,16 +488,97 @@ export function AdminInventory() {
                   className="bg-white border-gray-300 text-black"
                 />
               </div>
+              <div>
+                <Label className="text-black">Size (m²) *</Label>
+                <Input
+                  type="number"
+                  value={formData.size}
+                  onChange={(e) => setFormData({ ...formData, size: e.target.value })}
+                  className="bg-white border-gray-300 text-black"
+                />
+              </div>
+              <div>
+                <Label className="text-black">Rating *</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="5"
+                  value={formData.rating}
+                  onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
+                  className="bg-white border-gray-300 text-black"
+                />
+              </div>
             </div>
+
+            {/* Image Upload Section */}
             <div>
-              <Label className="text-black">Size (m²) *</Label>
-              <Input
-                type="number"
-                value={formData.size}
-                onChange={(e) => setFormData({ ...formData, size: e.target.value })}
-                className="bg-white border-gray-300 text-black"
-              />
+              <Label className="text-black mb-2 block">Room Images * (Upload 3 or more)</Label>
+              <div className="space-y-3">
+                {imagePreviews.length > 0 && (
+                  <div className="grid grid-cols-3 gap-3">
+                    {imagePreviews.map((img, index) => (
+                      <div key={index} className="relative group">
+                        <div className="relative h-32 rounded-lg overflow-hidden border-2 border-gray-300">
+                          <img 
+                            src={img} 
+                            alt={`Room preview ${index + 1}`} 
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute top-1 left-1 bg-black/70 text-white px-2 py-0.5 rounded text-xs">
+                            {index === 0 ? 'Main' : `#${index + 1}`}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveImage(index)}
+                          className="absolute top-2 right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <label className="flex-1 cursor-pointer">
+                    <div className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-primary hover:bg-blue-primary/90 text-white rounded-lg transition-colors">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span>{imagePreviews.length > 0 ? 'Add More Images' : 'Upload Images'}</span>
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      aria-label="Upload room images"
+                    />
+                  </label>
+                  {imagePreviews.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData({ ...formData, images: [] });
+                        setImagePreviews([]);
+                      }}
+                      className="px-4 py-2 border-2 border-red-500 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      Clear All
+                    </button>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500">
+                  Upload high-quality images (Max 5MB each, JPG/PNG). First image will be the main display.
+                </p>
+                <p className="text-xs text-gray-600 font-medium">
+                  {imagePreviews.length} image(s) uploaded {imagePreviews.length < 3 && '(Minimum 3 recommended)'}
+                </p>
+              </div>
             </div>
+
             <div className="flex items-center gap-2">
               <Switch
                 checked={formData.available}

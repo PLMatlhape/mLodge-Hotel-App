@@ -1,21 +1,52 @@
 import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAppDispatch } from '../store/hooks';
+import { loginSuccess } from '../store/slices/authSlice';
 import loginBg from '../assets/image/background/login-background.jpeg';
 import centerImage from '../assets/image/background/Offers-section.jpeg';
 import backIcon from '../assets/icons/white/white-back-button-icon.png';
 import logo from '../assets/image/Erxtras/Logo-mLodge-hotel.png';
 
 const Login: React.FC = () => {
+  const navigate = useNavigate();
+  const dispatch = useAppDispatch();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Check if admin credentials
-    if (username === 'Admin@mlodgehotel.co.za' && password === 'Admin@mlodgehotel') {
-      window.location.href = '/admin/overview';
-    } else {
-      window.location.href = '/dashboard';
-    }
+    setIsLoading(true);
+
+    // Simulate API call
+    setTimeout(() => {
+      // Check if admin credentials
+      if (username === 'Admin@mlodgehotel.co.za' && password === 'Admin@mlodgehotel') {
+        const adminUser = {
+          id: 'admin-1',
+          email: username,
+          firstName: 'Admin',
+          lastName: 'User',
+          phone: '0000000000',
+          role: 'admin' as const,
+        };
+        dispatch(loginSuccess(adminUser));
+        navigate('/admin/overview');
+      } else {
+        // Regular user login
+        const clientUser = {
+          id: Math.random().toString(36).substr(2, 9),
+          email: username,
+          firstName: 'Client',
+          lastName: 'User',
+          phone: '0123456789',
+          role: 'client' as const,
+        };
+        dispatch(loginSuccess(clientUser));
+        navigate('/dashboard');
+      }
+      setIsLoading(false);
+    }, 1000);
   };
 
   return (
@@ -31,13 +62,13 @@ const Login: React.FC = () => {
       </div>
 
       {/* Back to Home Button */}
-      <a 
-        href="/" 
+      <Link 
+        to="/" 
         className="absolute top-8 right-8 z-20 flex items-center gap-2 text-white hover:opacity-80 transition-opacity"
       >
         <img src={backIcon} alt="Back" className="w-6 h-6" />
         <span className="text-lg font-medium">Home</span>
-      </a>
+      </Link>
 
       {/* Logo */}
       <div className="absolute top-8 left-8 z-20 flex items-center gap-3">
@@ -98,35 +129,36 @@ const Login: React.FC = () => {
 
               {/* Forgot Password */}
               <div className="text-right">
-                <a href="#forgot" className="text-white text-sm hover:underline">
+                <Link to="/forgot-password" className="text-white text-sm hover:underline">
                   forgot password
-                </a>
+                </Link>
               </div>
 
               {/* Login Button */}
               <button
                 type="submit"
-                className="w-full bg-[#0F51AF] text-white py-3 rounded-lg font-semibold text-lg hover:bg-[#0d4291] transition-colors"
+                disabled={isLoading}
+                className="w-full bg-[#0F51AF] text-white py-3 rounded-lg font-semibold text-lg hover:bg-[#0d4291] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Login
+                {isLoading ? 'Logging in...' : 'Login'}
               </button>
 
               {/* Register Link */}
               <div className="text-center space-y-2">
                 <p className="text-white text-sm">Don't have an account</p>
-                <a 
-                  href="/register" 
+                <Link 
+                  to="/register" 
                   className="text-white text-sm font-semibold hover:underline block"
                 >
                   Register now
-                </a>
+                </Link>
               </div>
 
               {/* Terms and Services */}
               <div className="text-center pt-6">
-                <a href="#terms" className="text-white text-sm hover:underline">
+                <Link to="/terms" className="text-white text-sm hover:underline">
                   Terms and Services
-                </a>
+                </Link>
               </div>
             </form>
           </div>

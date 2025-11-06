@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import offersBg from '../assets/image/background/Offers-section.jpeg';
 import chefImage from '../assets/image/special-offers/chef.jpeg';
 import buffetImage from '../assets/image/special-offers/buffet.jpeg';
@@ -111,9 +112,12 @@ const Offers: React.FC = () => {
                       R{offer.originalPrice}
                     </span>
                   </div>
-                  <button className="bg-[#0F51AF] text-white px-6 py-2.5 rounded-lg hover:bg-[#0d4291] transition-colors font-medium">
+                  <Link 
+                    to="/dashboard" 
+                    className="bg-[#0F51AF] text-white px-6 py-2.5 rounded-lg hover:bg-[#0d4291] transition-colors font-medium"
+                  >
                     Order Now
-                  </button>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -134,9 +138,12 @@ const Offers: React.FC = () => {
               With spacious rooms, world-class amenities, and a dedicated team of hospitality professionals, 
               we strive to make your stay comfortable and memorable.
             </p>
-            <button className="bg-[#0F51AF] text-white px-8 py-3 rounded-lg hover:bg-[#0d4291] transition-colors font-medium text-lg">
+            <Link 
+              to="/register" 
+              className="bg-[#0F51AF] text-white px-8 py-3 rounded-lg hover:bg-[#0d4291] transition-colors font-medium text-lg inline-block"
+            >
               Join Our Community
-            </button>
+            </Link>
           </div>
 
           {/* Image Grid */}

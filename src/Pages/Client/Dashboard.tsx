@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { logout } from '../../store/slices/authSlice';
 import logo from '../../assets/image/Erxtras/Logo-mLodge-hotel.png';
 import searchIcon from '../../assets/icons/black/black-search-icon.png';
 import filterIcon from '../../assets/icons/black/black-filter-icon.png';
-import heartIcon from '../../assets/icons/yellow-heart-icon.png';
 import starIcon from '../../assets/icons/yellow-star-rate-icon.png';
 import bathIcon from '../../assets/icons/black/black-bath-icon.png';
 import backgroundImage from '../../assets/image/background/Client-Page.jpeg';
@@ -27,18 +29,26 @@ interface Room {
   price: number;
   rating: number;
   image: string;
+  images?: string[];
   badge: string;
   favorite: boolean;
 }
 
 const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(true);
   const [priceRange, setPriceRange] = useState([0, 10000]);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState('All locations');
+  const [selectedTier, setSelectedTier] = useState('All Tiers');
+  const [guestCount, setGuestCount] = useState('');
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
-  const rooms: Room[] = [
+  const [rooms, setRooms] = useState<Room[]>([
     {
       id: 1,
       name: "Luxury Penthouse",
@@ -50,6 +60,7 @@ const Dashboard: React.FC = () => {
       price: 8800,
       rating: 5,
       image: luxuryPenthouse,
+      images: [luxuryPenthouse, deluxeOcean, executiveBusiness],
       badge: "Premium",
       favorite: false
     },
@@ -64,6 +75,7 @@ const Dashboard: React.FC = () => {
       price: 5000,
       rating: 4.6,
       image: deluxeOcean,
+      images: [deluxeOcean, familySuite, standardComfort],
       badge: "Delux",
       favorite: false
     },
@@ -78,6 +90,7 @@ const Dashboard: React.FC = () => {
       price: 6800,
       rating: 4.9,
       image: executiveBusiness,
+      images: [executiveBusiness, presidentialSuite, romanticHoneymoon],
       badge: "Business",
       favorite: false
     },
@@ -92,6 +105,7 @@ const Dashboard: React.FC = () => {
       price: 4450,
       rating: 4.5,
       image: familySuite,
+      images: [familySuite, luxuryPenthouse, deluxeOcean],
       badge: "Premium",
       favorite: false
     },
@@ -106,6 +120,7 @@ const Dashboard: React.FC = () => {
       price: 7350,
       rating: 4.7,
       image: presidentialSuite,
+      images: [presidentialSuite, executiveBusiness, familySuite],
       badge: "Delux",
       favorite: false
     },
@@ -120,6 +135,7 @@ const Dashboard: React.FC = () => {
       price: 2500,
       rating: 4.2,
       image: standardComfort,
+      images: [standardComfort, deluxeOcean, romanticHoneymoon],
       badge: "Standard",
       favorite: false
     },
@@ -134,10 +150,39 @@ const Dashboard: React.FC = () => {
       price: 3800,
       rating: 5,
       image: romanticHoneymoon,
+      images: [romanticHoneymoon, presidentialSuite, luxuryPenthouse],
       badge: "Premium",
       favorite: false
     }
-  ];
+  ]);
+
+  const toggleFavorite = (roomId: number) => {
+    // Check if user is authenticated before allowing favorite toggle
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    setRooms(prevRooms =>
+      prevRooms.map(room =>
+        room.id === roomId ? { ...room, favorite: !room.favorite } : room
+      )
+    );
+  };
+
+  const filteredRooms = rooms.filter(room => {
+    const matchesSearch = room.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         room.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesPrice = room.price >= priceRange[0] && room.price <= priceRange[1];
+    const matchesLocation = selectedLocation === 'All locations' || room.location === selectedLocation;
+    const matchesTier = selectedTier === 'All Tiers' || room.badge === selectedTier;
+    const matchesGuests = !guestCount || parseInt(room.guests.match(/\d+/)?.[0] || '0') >= parseInt(guestCount);
+    const matchesFavorites = !showFavoritesOnly || room.favorite;
+
+    return matchesSearch && matchesPrice && matchesLocation && matchesTier && matchesGuests && matchesFavorites;
+  });
+
+  const favoriteRooms = rooms.filter(room => room.favorite);
 
   const getBadgeColor = (badge: string) => {
     switch (badge) {
@@ -155,8 +200,8 @@ const Dashboard: React.FC = () => {
   };
 
   const handleLogout = () => {
-    // Handle logout logic
-    window.location.href = '/';
+    dispatch(logout());
+    navigate('/');
   };
 
   return (
@@ -206,15 +251,34 @@ const Dashboard: React.FC = () => {
 
             {/* Dropdown Menu */}
             {menuOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl overflow-hidden z-50">
+              <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl overflow-hidden z-50">
                 <button
-                  onClick={() => window.location.href = '/profile'}
+                  onClick={() => navigate('/profile')}
                   className="w-full px-4 py-3 text-left text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-3"
                 >
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                   </svg>
                   Profile
+                </button>
+                <button
+                  onClick={() => {
+                    setShowFavoritesOnly(!showFavoritesOnly);
+                    setMenuOpen(false);
+                  }}
+                  className="w-full px-4 py-3 text-left text-gray-700 hover:bg-gray-100 transition-colors flex items-center justify-between gap-3 border-t"
+                >
+                  <div className="flex items-center gap-3">
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                    </svg>
+                    <span>Favorites ({favoriteRooms.length})</span>
+                  </div>
+                  {showFavoritesOnly && (
+                    <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                    </svg>
+                  )}
                 </button>
                 <button
                   onClick={handleLogout}
@@ -306,6 +370,8 @@ const Dashboard: React.FC = () => {
                     </label>
                     <select 
                       id="location-select"
+                      value={selectedLocation}
+                      onChange={(e) => setSelectedLocation(e.target.value)}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0F51AF]"
                     >
                       <option>All locations</option>
@@ -323,6 +389,8 @@ const Dashboard: React.FC = () => {
                     </label>
                     <select 
                       id="room-tier-select"
+                      value={selectedTier}
+                      onChange={(e) => setSelectedTier(e.target.value)}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0F51AF]"
                     >
                       <option>All Tiers</option>
@@ -342,6 +410,8 @@ const Dashboard: React.FC = () => {
                       id="guests-input"
                       type="number"
                       min="1"
+                      value={guestCount}
+                      onChange={(e) => setGuestCount(e.target.value)}
                       placeholder="Any"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0F51AF]"
                     />
@@ -384,8 +454,17 @@ const Dashboard: React.FC = () => {
 
           {/* Room Cards Grid */}
           <div className="flex-1">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {rooms.map((room) => (
+            {filteredRooms.length === 0 ? (
+              <div className="bg-white rounded-lg p-12 text-center">
+                <svg className="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h3 className="text-gray-900 text-xl font-bold mb-2">No rooms found</h3>
+                <p className="text-gray-600">Try adjusting your filters or search criteria</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredRooms.map((room) => (
                 <div key={room.id} className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
                   {/* Room Image */}
                   <div className="relative h-48">
@@ -404,10 +483,25 @@ const Dashboard: React.FC = () => {
 
                     {/* Favorite */}
                     <button 
-                      className="absolute bottom-3 right-3 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors"
+                      onClick={() => toggleFavorite(room.id)}
+                      className={`absolute bottom-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+                        room.favorite ? 'bg-red-500' : 'bg-white/90 backdrop-blur-sm hover:bg-white'
+                      }`}
                       aria-label="Add to favorites"
                     >
-                      <img src={heartIcon} alt="Favorite" className="w-5 h-5" />
+                      <svg 
+                        className={`w-5 h-5 ${room.favorite ? 'text-white' : 'text-gray-600'}`}
+                        fill={room.favorite ? 'currentColor' : 'none'}
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth={2} 
+                          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                        />
+                      </svg>
                     </button>
                   </div>
 
@@ -466,6 +560,7 @@ const Dashboard: React.FC = () => {
                 </div>
               ))}
             </div>
+            )}
           </div>
         </div>
       </div>

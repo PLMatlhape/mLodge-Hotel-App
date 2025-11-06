@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import logo from '../assets/image/Erxtras/Logo-mLodge-hotel.png';
 import contactIcon from '../assets/icons/black/black-contact-icon.png';
 import emailIcon from '../assets/icons/black/black-email-icon.png';
@@ -31,19 +32,19 @@ const Footer: React.FC = () => {
             <h4 className="text-gray-900 text-lg font-bold mb-4">Quick Links</h4>
             <ul className="space-y-2">
               <li>
-                <a href="#home" className="text-gray-700 text-sm hover:text-[#0F51AF] transition-colors">
+                <Link to="/" className="text-gray-700 text-sm hover:text-[#0F51AF] transition-colors">
                   Home
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#register" className="text-gray-700 text-sm hover:text-[#0F51AF] transition-colors">
+                <Link to="/register" className="text-gray-700 text-sm hover:text-[#0F51AF] transition-colors">
                   Register
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#login" className="text-gray-700 text-sm hover:text-[#0F51AF] transition-colors">
+                <Link to="/login" className="text-gray-700 text-sm hover:text-[#0F51AF] transition-colors">
                   Login
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -53,9 +54,9 @@ const Footer: React.FC = () => {
             <h4 className="text-gray-900 text-lg font-bold mb-4">Services</h4>
             <ul className="space-y-2">
               <li>
-                <a href="#rooms" className="text-gray-700 text-sm hover:text-[#0F51AF] transition-colors">
+                <Link to="/dashboard" className="text-gray-700 text-sm hover:text-[#0F51AF] transition-colors">
                   Luxury Rooms
-                </a>
+                </Link>
               </li>
               <li>
                 <a href="#dining" className="text-gray-700 text-sm hover:text-[#0F51AF] transition-colors">

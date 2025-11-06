@@ -1,0 +1,291 @@
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import logo from '../../assets/image/Erxtras/Logo-mLodge-hotel.png';
+import backgroundImage from '../../assets/image/background/Client-Page.jpeg';
+
+const Profile: React.FC = () => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [profileData, setProfileData] = useState({
+    fullName: 'John Doe',
+    email: 'john.doe@example.com',
+    phone: '+27 123 456 7890',
+    address: '123 Main Street, Cape Town, 8001',
+    dateOfBirth: '1990-01-15',
+    nationality: 'South African'
+  });
+
+  const [formData, setFormData] = useState({ ...profileData });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setProfileData({ ...formData });
+    setIsEditing(false);
+    // Here you would typically send the updated data to your backend
+  };
+
+  const handleCancel = () => {
+    setFormData({ ...profileData });
+    setIsEditing(false);
+  };
+
+  return (
+    <div className="min-h-screen relative">
+      {/* Background Image */}
+      <div className="fixed inset-0 z-0">
+        <img 
+          src={backgroundImage} 
+          alt="Background" 
+          className="w-full h-full object-cover object-center"
+        />
+        <div className="absolute inset-0 bg-[#1E3A5F]/30"></div>
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10">
+        {/* Header */}
+        <header className="bg-[#001F3F] px-6 py-4 flex items-center justify-between">
+          {/* Logo */}
+          <div className="flex items-center gap-3">
+            <div className="w-16 h-16 rounded-full bg-[#001C43] flex items-center justify-center">
+              <img src={logo} alt="mLodge Hotel Logo" className="w-12 h-12 object-contain" />
+            </div>
+            <h1 className="text-white text-2xl font-bold">mLodge Hotel</h1>
+          </div>
+
+          {/* Back to Dashboard */}
+          <Link 
+            to="/dashboard" 
+            className="flex items-center gap-2 text-white hover:opacity-80 transition-opacity"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            <span className="text-lg font-medium">Back to Dashboard</span>
+          </Link>
+        </header>
+
+        {/* Main Content */}
+        <div className="max-w-4xl mx-auto px-6 py-12">
+          <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+            {/* Profile Header */}
+            <div className="bg-gradient-to-r from-[#001F3F] to-[#0056D2] px-8 py-12">
+              <div className="flex items-center gap-6">
+                {/* Avatar */}
+                <div className="w-32 h-32 rounded-full bg-white flex items-center justify-center text-[#001F3F] text-5xl font-bold">
+                  {profileData.fullName.split(' ').map(n => n[0]).join('')}
+                </div>
+                
+                {/* User Info */}
+                <div className="flex-1">
+                  <h2 className="text-white text-4xl font-bold mb-2">{profileData.fullName}</h2>
+                  <p className="text-gray-200 text-lg">{profileData.email}</p>
+                  <div className="mt-4">
+                    <span className="inline-block bg-[#00CD07] text-white px-4 py-1 rounded-full text-sm font-semibold">
+                      Active Member
+                    </span>
+                  </div>
+                </div>
+
+                {/* Edit Button */}
+                {!isEditing && (
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="bg-white text-[#0F51AF] px-6 py-3 rounded-lg hover:bg-gray-100 transition-colors font-medium"
+                  >
+                    Edit Profile
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Profile Details */}
+            <div className="p-8">
+              <h3 className="text-gray-900 text-2xl font-bold mb-6">Personal Information</h3>
+
+              {isEditing ? (
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* Full Name */}
+                  <div>
+                    <label htmlFor="fullName" className="block text-gray-700 font-medium mb-2">
+                      Full Name
+                    </label>
+                    <input
+                      type="text"
+                      id="fullName"
+                      name="fullName"
+                      value={formData.fullName}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0F51AF]"
+                      required
+                    />
+                  </div>
+
+                  {/* Email */}
+                  <div>
+                    <label htmlFor="email" className="block text-gray-700 font-medium mb-2">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      id="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0F51AF]"
+                      required
+                    />
+                  </div>
+
+                  {/* Phone */}
+                  <div>
+                    <label htmlFor="phone" className="block text-gray-700 font-medium mb-2">
+                      Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      id="phone"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0F51AF]"
+                      required
+                    />
+                  </div>
+
+                  {/* Address */}
+                  <div>
+                    <label htmlFor="address" className="block text-gray-700 font-medium mb-2">
+                      Address
+                    </label>
+                    <input
+                      type="text"
+                      id="address"
+                      name="address"
+                      value={formData.address}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0F51AF]"
+                      required
+                    />
+                  </div>
+
+                  {/* Date of Birth */}
+                  <div>
+                    <label htmlFor="dateOfBirth" className="block text-gray-700 font-medium mb-2">
+                      Date of Birth
+                    </label>
+                    <input
+                      type="date"
+                      id="dateOfBirth"
+                      name="dateOfBirth"
+                      value={formData.dateOfBirth}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0F51AF]"
+                      required
+                    />
+                  </div>
+
+                  {/* Nationality */}
+                  <div>
+                    <label htmlFor="nationality" className="block text-gray-700 font-medium mb-2">
+                      Nationality
+                    </label>
+                    <input
+                      type="text"
+                      id="nationality"
+                      name="nationality"
+                      value={formData.nationality}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0F51AF]"
+                      required
+                    />
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-4 pt-4">
+                    <button
+                      type="submit"
+                      className="flex-1 bg-[#0F51AF] text-white py-3 rounded-lg hover:bg-[#0d4291] transition-colors font-medium text-lg"
+                    >
+                      Save Changes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCancel}
+                      className="flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-400 transition-colors font-medium text-lg"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="space-y-6">
+                  {/* Display Mode */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <p className="text-gray-600 text-sm font-medium mb-1">Full Name</p>
+                      <p className="text-gray-900 text-lg">{profileData.fullName}</p>
+                    </div>
+                    
+                    <div>
+                      <p className="text-gray-600 text-sm font-medium mb-1">Email Address</p>
+                      <p className="text-gray-900 text-lg">{profileData.email}</p>
+                    </div>
+                    
+                    <div>
+                      <p className="text-gray-600 text-sm font-medium mb-1">Phone Number</p>
+                      <p className="text-gray-900 text-lg">{profileData.phone}</p>
+                    </div>
+                    
+                    <div>
+                      <p className="text-gray-600 text-sm font-medium mb-1">Date of Birth</p>
+                      <p className="text-gray-900 text-lg">
+                        {new Date(profileData.dateOfBirth).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <p className="text-gray-600 text-sm font-medium mb-1">Nationality</p>
+                      <p className="text-gray-900 text-lg">{profileData.nationality}</p>
+                    </div>
+                    
+                    <div className="md:col-span-2">
+                      <p className="text-gray-600 text-sm font-medium mb-1">Address</p>
+                      <p className="text-gray-900 text-lg">{profileData.address}</p>
+                    </div>
+                  </div>
+
+                  {/* Recent Bookings Section */}
+                  <div className="mt-12">
+                    <h3 className="text-gray-900 text-2xl font-bold mb-6">Recent Bookings</h3>
+                    <div className="bg-gray-50 rounded-lg p-6 text-center">
+                      <p className="text-gray-600">No recent bookings</p>
+                      <Link 
+                        to="/dashboard" 
+                        className="inline-block mt-4 bg-[#0F51AF] text-white px-6 py-2 rounded-lg hover:bg-[#0d4291] transition-colors font-medium"
+                      >
+                        Browse Rooms
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Profile;

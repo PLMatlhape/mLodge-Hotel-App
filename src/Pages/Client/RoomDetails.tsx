@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAppSelector } from '../../store/hooks';
 import starIcon from '../../assets/icons/yellow-star-rate-icon.png';
 import heartIcon from '../../assets/icons/yellow-heart-icon.png';
 import bathIcon from '../../assets/icons/black/black-bath-icon.png';
@@ -20,23 +22,57 @@ interface RoomDetailsProps {
   room: {
     id: number;
     name: string;
-    location: string;
+    location?: string;
     beds: number;
     baths: number;
     area: number;
-    guests: string;
+    guests?: string;
     price: number;
-    rating: number;
+    rating?: number;
     image: string;
+    images?: string[];
     badge: string;
-    favorite: boolean;
+    favorite?: boolean;
   };
   onClose: () => void;
 }
 
 const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
+  
+  // Get today's date in YYYY-MM-DD format
+  const today = new Date().toISOString().split('T')[0];
+  
   const [checkInDate, setCheckInDate] = useState('');
   const [checkOutDate, setCheckOutDate] = useState('');
+  const [mainImage, setMainImage] = useState(room.image);
+  const [thumbnails, setThumbnails] = useState<string[]>(
+    room.images && room.images.length > 0 
+      ? room.images.slice(0, 3) 
+      : [room.image, room.image, room.image]
+  );
+
+  // Handle image swap
+  const handleImageSwap = (clickedIndex: number) => {
+    const clickedImage = thumbnails[clickedIndex];
+    const newThumbnails = [...thumbnails];
+    newThumbnails[clickedIndex] = mainImage;
+    
+    setMainImage(clickedImage);
+    setThumbnails(newThumbnails);
+  };
+
+  // Handle favorite toggle
+  const handleFavoriteClick = () => {
+    if (!isAuthenticated) {
+      onClose(); // Close the modal first
+      navigate('/login');
+      return;
+    }
+    // TODO: Implement favorite toggle with Redux when connected
+    alert('Favorite functionality will be implemented when Redux is connected');
+  };
 
   // Calculate nights based on check-in and check-out dates
   const calculateNights = () => {
@@ -53,9 +89,6 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
   const nights = calculateNights();
   const serviceFee = 350;
   const totalPrice = room.price * nights + serviceFee;
-
-  // Additional room images (you can add more images per room)
-  const additionalImages = [room.image, room.image, room.image];
 
   const amenities = [
     { icon: wifiIcon, name: 'Free High-Speed Wi-Fi' },
@@ -79,8 +112,47 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
   ];
 
   const handleBookNow = () => {
-    // Handle booking logic
-    console.log('Booking:', { room: room.name, checkInDate, checkOutDate, nights, totalPrice });
+    // Validate dates before booking
+    if (!checkInDate || !checkOutDate) {
+      alert('Please select check-in and check-out dates');
+      return;
+    }
+
+    const checkIn = new Date(checkInDate);
+    const checkOut = new Date(checkOutDate);
+
+    if (checkOut <= checkIn) {
+      alert('Check-out date must be after check-in date');
+      return;
+    }
+
+    // Format dates for display
+    const formatDate = (date: Date) => {
+      return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric' 
+      });
+    };
+
+    // Navigate to booking page with all parameters
+    const params = new URLSearchParams({
+      roomName: room.name,
+      roomImage: room.image,
+      roomBadge: room.badge,
+      location: room.location || 'Location Not Specified',
+      beds: room.beds.toString(),
+      baths: room.baths.toString(),
+      area: room.area.toString(),
+      rating: (room.rating || 4.5).toString(),
+      guests: room.guests || 'Not Specified',
+      checkInDate: formatDate(checkIn),
+      checkOutDate: formatDate(checkOut),
+      nights: nights.toString(),
+      pricePerNight: room.price.toString()
+    });
+
+    navigate(`/book?${params.toString()}`);
   };
 
   return (
@@ -106,7 +178,7 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
               {/* Main Image and Gallery */}
               <div className="space-y-4">
                 <div className="relative h-96 rounded-xl overflow-hidden">
-                  <img src={room.image} alt={room.name} className="w-full h-full object-cover" />
+                  <img src={mainImage} alt={room.name} className="w-full h-full object-cover" />
                   
                   {/* Badge */}
                   <div className="absolute top-4 left-4 bg-[#00CD07] text-white px-4 py-2 rounded-lg text-sm font-semibold uppercase">
@@ -114,16 +186,37 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
                   </div>
 
                   {/* Favorite */}
-                  <button className="absolute bottom-4 right-4 w-12 h-12 bg-white rounded-full flex items-center justify-center hover:scale-110 transition-transform">
+                  <button 
+                    onClick={handleFavoriteClick}
+                    className="absolute bottom-4 right-4 w-12 h-12 bg-white rounded-full flex items-center justify-center hover:scale-110 transition-transform"
+                  >
                     <img src={heartIcon} alt="Favorite" className="w-6 h-6" />
                   </button>
                 </div>
 
-                {/* Additional Images */}
+                {/* Thumbnail Images with Swap Functionality */}
                 <div className="grid grid-cols-3 gap-4">
-                  {additionalImages.map((img, index) => (
-                    <div key={index} className="h-32 rounded-lg overflow-hidden">
-                      <img src={img} alt={`View ${index + 1}`} className="w-full h-full object-cover hover:scale-110 transition-transform cursor-pointer" />
+                  {thumbnails.map((img, index) => (
+                    <div 
+                      key={index} 
+                      className="relative h-32 rounded-lg overflow-hidden cursor-pointer group"
+                      onClick={() => handleImageSwap(index)}
+                    >
+                      <img 
+                        src={img} 
+                        alt={`View ${index + 1}`} 
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform" 
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                        <svg 
+                          className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -135,7 +228,7 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
                   <h1 className="text-4xl font-bold text-gray-900">{room.name}</h1>
                   <div className="flex items-center gap-2 bg-gray-100 px-3 py-2 rounded-lg">
                     <img src={starIcon} alt="Rating" className="w-5 h-5" />
-                    <span className="font-semibold text-gray-900">{room.rating}</span>
+                    <span className="font-semibold text-gray-900">{room.rating || 4.5}</span>
                     <span className="text-gray-600 text-sm">(128 Reviews)</span>
                   </div>
                 </div>
@@ -225,31 +318,47 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
                 {/* Date Inputs */}
                 <div className="space-y-4 mb-6">
                   <div>
-                    <label className="block text-gray-900 font-semibold mb-2">Check in date</label>
+                    <label htmlFor="checkInDate" className="block text-gray-900 font-semibold mb-2">Check in date</label>
                     <div className="flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-3">
                       <img src={calendarIcon} alt="Calendar" className="w-5 h-5" />
                       <input
                         type="date"
+                        id="checkInDate"
                         value={checkInDate}
-                        onChange={(e) => setCheckInDate(e.target.value)}
+                        onChange={(e) => {
+                          setCheckInDate(e.target.value);
+                          // Reset check-out date if it's before the new check-in date
+                          if (checkOutDate && e.target.value >= checkOutDate) {
+                            setCheckOutDate('');
+                          }
+                        }}
+                        min={today}
                         className="flex-1 outline-none text-gray-700"
                         placeholder="yyyy/mm/dd"
+                        required
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-gray-900 font-semibold mb-2">Check out date</label>
+                    <label htmlFor="checkOutDate" className="block text-gray-900 font-semibold mb-2">Check out date</label>
                     <div className="flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-3">
                       <img src={calendarIcon} alt="Calendar" className="w-5 h-5" />
                       <input
                         type="date"
+                        id="checkOutDate"
                         value={checkOutDate}
                         onChange={(e) => setCheckOutDate(e.target.value)}
-                        className="flex-1 outline-none text-gray-700"
+                        min={checkInDate || today}
+                        disabled={!checkInDate}
+                        className="flex-1 outline-none text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                         placeholder="yyyy/mm/dd"
+                        required
                       />
                     </div>
+                    {!checkInDate && (
+                      <p className="text-xs text-gray-500 mt-1">Please select check-in date first</p>
+                    )}
                   </div>
                 </div>
 
@@ -275,10 +384,14 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
                 {/* Book Button */}
                 <button
                   onClick={handleBookNow}
-                  className="w-full bg-[#0F51AF] text-white py-4 rounded-lg font-bold text-lg hover:bg-[#0d4291] transition-colors"
+                  disabled={!checkInDate || !checkOutDate}
+                  className="w-full bg-[#0F51AF] text-white py-4 rounded-lg font-bold text-lg hover:bg-[#0d4291] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Book Now
                 </button>
+                {(!checkInDate || !checkOutDate) && (
+                  <p className="text-xs text-gray-500 text-center mt-2">Select dates to continue</p>
+                )}
               </div>
             </div>
           </div>

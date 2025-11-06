@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 // Event Images
 import jazzNight from '../assets/image/events/jazz-night.jpeg';
 import wineTasting from '../assets/image/events/wine-tasting.jpg';
@@ -118,9 +119,12 @@ const Events: React.FC = () => {
                 </p>
 
                 {/* Reserve Button */}
-                <button className="w-full bg-[#0F51AF] text-white py-3 rounded-lg hover:bg-[#0d4291] transition-colors font-medium">
-                  Reserve Your Sport
-                </button>
+                <Link 
+                  to="/dashboard" 
+                  className="w-full bg-[#0F51AF] text-white py-3 rounded-lg hover:bg-[#0d4291] transition-colors font-medium text-center block"
+                >
+                  Reserve Your Spot
+                </Link>
               </div>
             </div>
           ))}
@@ -139,12 +143,18 @@ const Events: React.FC = () => {
 
             {/* Action Buttons */}
             <div className="flex items-center justify-center gap-6">
-              <button className="bg-[#0F51AF] text-white px-10 py-3.5 rounded-lg hover:bg-[#0d4291] transition-colors font-medium text-lg">
+              <Link 
+                to="/register" 
+                className="bg-[#0F51AF] text-white px-10 py-3.5 rounded-lg hover:bg-[#0d4291] transition-colors font-medium text-lg"
+              >
                 Create account
-              </button>
-              <button className="bg-transparent text-gray-900 border-2 border-gray-900 px-10 py-3.5 rounded-lg hover:bg-gray-900 hover:text-white transition-colors font-medium text-lg">
+              </Link>
+              <Link 
+                to="/login" 
+                className="bg-transparent text-gray-900 border-2 border-gray-900 px-10 py-3.5 rounded-lg hover:bg-gray-900 hover:text-white transition-colors font-medium text-lg"
+              >
                 Already a member?
-              </button>
+              </Link>
             </div>
           </div>
         </div>
