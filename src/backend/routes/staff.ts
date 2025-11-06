@@ -13,19 +13,16 @@ router.get('/', authenticateToken, requireAdmin, async (req: AuthRequest, res: R
     const offset = (page - 1) * limit;
 
     const result = await db.query(
-      `SELECT id, name, email, phone, role, is_active, created_at, updated_at,
-              NULL as department, NULL as hire_date,
-              CASE WHEN is_active = true THEN 'active' ELSE 'inactive' END as status,
-              NULL as salary, NULL as emergency_contact, NULL as address
+      `SELECT id, name, email, role, is_active, created_at, updated_at
        FROM users
-       WHERE role != 'user'
+       WHERE role IN ('admin', 'staff')
        ORDER BY created_at DESC
        LIMIT $1 OFFSET $2`,
       [limit, offset]
     );
 
     const countResult = await db.query(
-      `SELECT COUNT(*) as total FROM users WHERE role != 'user'`
+      `SELECT COUNT(*) as total FROM users WHERE role IN ('admin', 'staff')`
     );
 
     const total = parseInt(countResult.rows[0].total);
@@ -51,12 +48,9 @@ router.get('/:id', authenticateToken, requireAdmin, async (req: AuthRequest, res
     const { id } = req.params;
 
     const result = await db.query(
-      `SELECT id, name, email, phone, role, is_active, created_at, updated_at,
-              NULL as department, NULL as hire_date,
-              CASE WHEN is_active = true THEN 'active' ELSE 'inactive' END as status,
-              NULL as salary, NULL as emergency_contact, NULL as address
+      `SELECT id, name, email, role, is_active, created_at, updated_at
        FROM users
-       WHERE id = $1 AND role != 'user'`,
+       WHERE id = $1 AND role IN ('admin', 'staff')`,
       [id]
     );
 
@@ -75,7 +69,7 @@ router.get('/:id', authenticateToken, requireAdmin, async (req: AuthRequest, res
 // Create new staff member
 router.post('/', authenticateToken, requireAdmin, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { name, email, password, role, phone, department, hire_date, salary, emergency_contact, address } = req.body;
+    const { name, email, password, role } = req.body;
 
     // Validate required fields
     if (!name || !email || !password || !role) {
@@ -98,10 +92,10 @@ router.post('/', authenticateToken, requireAdmin, async (req: AuthRequest, res: 
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const result = await db.query(
-      `INSERT INTO users (name, email, password, role, phone, is_active)
-       VALUES ($1, $2, $3, $4, $5, true)
-       RETURNING id, name, email, phone, role, is_active, created_at, updated_at`,
-      [name, email, hashedPassword, role, phone]
+      `INSERT INTO users (name, email, password, role, is_active)
+       VALUES ($1, $2, $3, $4, true)
+       RETURNING id, name, email, role, is_active, created_at, updated_at`,
+      [name, email, hashedPassword, role]
     );
 
     res.status(201).json(result.rows[0]);
@@ -115,7 +109,7 @@ router.post('/', authenticateToken, requireAdmin, async (req: AuthRequest, res: 
 router.put('/:id', authenticateToken, requireAdmin, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { name, email, role, is_active, phone } = req.body;
+    const { name, email, role, is_active } = req.body;
 
     const result = await db.query(
       `UPDATE users
@@ -123,11 +117,10 @@ router.put('/:id', authenticateToken, requireAdmin, async (req: AuthRequest, res
            email = COALESCE($2, email),
            role = COALESCE($3, role),
            is_active = COALESCE($4, is_active),
-           phone = COALESCE($5, phone),
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $6 AND role != 'user'
-       RETURNING id, name, email, phone, role, is_active, created_at, updated_at`,
-      [name, email, role, is_active, phone, id]
+       WHERE id = $5 AND role IN ('admin', 'staff')
+       RETURNING id, name, email, role, is_active, created_at, updated_at`,
+      [name, email, role, is_active, id]
     );
 
     if (result.rows.length === 0) {
@@ -155,7 +148,7 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req: AuthRequest, 
 
     const result = await db.query(
       `DELETE FROM users
-       WHERE id = $1 AND role != 'user'
+       WHERE id = $1 AND role IN ('admin', 'staff')
        RETURNING id`,
       [id]
     );
@@ -182,8 +175,8 @@ router.patch('/:id/status', authenticateToken, requireAdmin, async (req: AuthReq
       `UPDATE users
        SET is_active = $1,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $2 AND role != 'user'
-       RETURNING id, name, email, phone, role, is_active, created_at, updated_at`,
+       WHERE id = $2 AND role IN ('admin', 'staff')
+       RETURNING id, name, email, role, is_active, created_at, updated_at`,
       [is_active, id]
     );
 
@@ -216,7 +209,7 @@ router.patch('/:id/password', authenticateToken, requireAdmin, async (req: AuthR
       `UPDATE users
        SET password = $1,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $2 AND role != 'user'
+       WHERE id = $2 AND role IN ('admin', 'staff')
        RETURNING id`,
       [hashedPassword, id]
     );
