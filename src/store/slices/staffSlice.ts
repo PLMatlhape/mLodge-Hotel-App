@@ -8,7 +8,6 @@ export interface StaffMember {
   email: string;
   phone: string;
   role: 'Manager' | 'Receptionist' | 'Housekeeping' | 'Maintenance' | 'Security' | 'Other';
-  department?: string;
   hire_date: string;
   status: 'active' | 'inactive' | 'on_leave';
   salary?: number;
@@ -57,20 +56,20 @@ export const fetchAllStaff = createAsyncThunk(
     status?: string;
   } = {}) => {
     const token = getAuthToken();
-    let url = `${API_BASE_URL}/staff?page=${page}&limit=${limit}`;
+    let url = `${API_BASE_URL}/admin/staff?page=${page}&limit=${limit}`;
     if (role) url += `&role=${role}`;
     if (status) url += `&status=${status}`;
-    
+
     const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
     });
-    
+
     if (!response.ok) {
       throw new Error('Failed to fetch staff');
     }
-    
+
     return response.json();
   }
 );
@@ -80,16 +79,16 @@ export const fetchStaffById = createAsyncThunk(
   'staff/fetchById',
   async (id: number) => {
     const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/staff/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/admin/staff/${id}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
     });
-    
+
     if (!response.ok) {
       throw new Error('Failed to fetch staff member');
     }
-    
+
     return response.json();
   }
 );
@@ -102,27 +101,36 @@ export const createStaff = createAsyncThunk(
     email: string;
     phone: string;
     role: string;
-    department?: string;
     hire_date: string;
     salary?: number;
     emergency_contact?: string;
     address?: string;
   }) => {
     const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/staff`, {
+    const response = await fetch(`${API_BASE_URL}/admin/staff`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify(staffData),
+      body: JSON.stringify({
+        name: staffData.name,
+        email: staffData.email,
+        password: 'defaultPassword123', // Default password for new staff
+        role: staffData.role,
+        phone: staffData.phone,
+        hire_date: staffData.hire_date,
+        salary: staffData.salary,
+        emergency_contact: staffData.emergency_contact,
+        address: staffData.address,
+      }),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || 'Failed to create staff member');
     }
-    
+
     return response.json();
   }
 );
@@ -135,7 +143,7 @@ export const updateStaff = createAsyncThunk(
     staffData: Partial<StaffMember>;
   }) => {
     const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/staff/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/admin/staff/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -143,12 +151,12 @@ export const updateStaff = createAsyncThunk(
       },
       body: JSON.stringify(staffData),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || 'Failed to update staff member');
     }
-    
+
     return response.json();
   }
 );
@@ -158,20 +166,20 @@ export const updateStaffStatus = createAsyncThunk(
   'staff/updateStatus',
   async ({ id, status }: { id: number; status: 'active' | 'inactive' | 'on_leave' }) => {
     const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/staff/${id}/status`, {
-      method: 'PUT',
+    const response = await fetch(`${API_BASE_URL}/admin/staff/${id}/status`, {
+      method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ is_active: status === 'active' }),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || 'Failed to update staff status');
     }
-    
+
     return response.json();
   }
 );
@@ -181,18 +189,18 @@ export const deleteStaff = createAsyncThunk(
   'staff/delete',
   async (id: number) => {
     const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/staff/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/admin/staff/${id}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`,
       },
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || 'Failed to delete staff member');
     }
-    
+
     return id;
   }
 );
