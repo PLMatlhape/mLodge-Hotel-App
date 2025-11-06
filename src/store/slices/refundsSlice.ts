@@ -9,14 +9,16 @@ export interface Refund {
   booking_reference: string;
   guest_name: string;
   guest_email: string;
-  amount: number;
+  accommodation_name: string;
+  booking_amount: number;
+  refund_amount: number;
   reason: string;
-  status: 'Pending' | 'Approved' | 'Rejected' | 'Processed';
+  status: 'pending' | 'approved' | 'rejected' | 'completed';
   requested_date: string;
   processed_date?: string;
-  rejection_reason?: string;
-  refund_method?: 'original_payment' | 'bank_transfer' | 'voucher';
   admin_notes?: string;
+  transaction_id?: string;
+  processed_by?: number;
   created_at: string;
   updated_at: string;
 }
@@ -52,13 +54,13 @@ export const fetchAllRefunds = createAsyncThunk(
   'refunds/fetchAll',
   async ({ page = 1, limit = 10, status }: { page?: number; limit?: number; status?: string } = {}) => {
     const token = getAuthToken();
-    let url = `${API_BASE_URL}/refunds?page=${page}&limit=${limit}`;
+    let url = `${API_BASE_URL}/admin/refunds?page=${page}&limit=${limit}`;
     if (status) url += `&status=${status}`;
-    
+
     const response = await fetch(url, {
       headers: { 'Authorization': `Bearer ${token}` },
     });
-    
+
     if (!response.ok) throw new Error('Failed to fetch refunds');
     return response.json();
   }
@@ -82,7 +84,7 @@ export const createRefund = createAsyncThunk(
       },
       body: JSON.stringify(refundData),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || 'Failed to create refund request');
@@ -96,15 +98,15 @@ export const approveRefund = createAsyncThunk(
   'refunds/approve',
   async ({ id, adminNotes }: { id: number; adminNotes?: string }) => {
     const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/refunds/${id}/approve`, {
-      method: 'PUT',
+    const response = await fetch(`${API_BASE_URL}/admin/refunds/${id}/approve`, {
+      method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify({ adminNotes }),
+      body: JSON.stringify({ admin_notes: adminNotes }),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || 'Failed to approve refund');
@@ -118,15 +120,15 @@ export const rejectRefund = createAsyncThunk(
   'refunds/reject',
   async ({ id, rejectionReason }: { id: number; rejectionReason: string }) => {
     const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/refunds/${id}/reject`, {
-      method: 'PUT',
+    const response = await fetch(`${API_BASE_URL}/admin/refunds/${id}/reject`, {
+      method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify({ rejectionReason }),
+      body: JSON.stringify({ admin_notes: rejectionReason }),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || 'Failed to reject refund');
@@ -138,13 +140,17 @@ export const rejectRefund = createAsyncThunk(
 // Process refund (admin)
 export const processRefund = createAsyncThunk(
   'refunds/process',
-  async (id: number) => {
+  async ({ id, transactionId }: { id: number; transactionId?: string }) => {
     const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/refunds/${id}/process`, {
-      method: 'PUT',
-      headers: { 'Authorization': `Bearer ${token}` },
+    const response = await fetch(`${API_BASE_URL}/admin/refunds/${id}/process`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ transaction_id: transactionId }),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || 'Failed to process refund');

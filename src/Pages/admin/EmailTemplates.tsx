@@ -234,7 +234,7 @@ export function AdminEmailTemplates() {
         </TabsList>
         {categories.map(category => (
           <TabsContent key={category} value={category} className="space-y-4">
-            {templates.filter(t => t.category === category).map(template => (
+            {templates.filter(t => t.type === category).map(template => (
               <Card key={template.id} className="bg-gray-light border-0">
                 <CardContent className="p-4 sm:p-6">
                   <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
@@ -242,7 +242,7 @@ export function AdminEmailTemplates() {
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="text-base sm:text-lg font-semibold text-black">{template.name}</h3>
                         <Badge className="bg-blue-primary text-white">
-                          {template.category}
+                          {template.type}
                         </Badge>
                       </div>
                       <p className="text-xs sm:text-sm text-gray-text mb-3">
