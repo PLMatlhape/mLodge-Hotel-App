@@ -377,26 +377,41 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req: AuthRequest, 
     const { id } = req.params;
 
     // Check if room exists
-    const checkResult = await db.query('SELECT id FROM rooms WHERE id = $1', [id]);
+    const checkResult = await db.query('SELECT id, name FROM rooms WHERE id = $1', [id]);
     
     if (checkResult.rows.length === 0) {
       res.status(404).json({ error: 'Room not found' });
       return;
     }
 
+    const roomName = checkResult.rows[0].name;
+
     // Check for existing bookings
     const bookingCheck = await db.query(
-      'SELECT COUNT(*) as count FROM booking_items WHERE room_id = $1',
+      `SELECT COUNT(*) as count, 
+              MIN(b.check_in_date) as earliest_checkin,
+              MAX(b.check_out_date) as latest_checkout
+       FROM booking_items bi
+       JOIN bookings b ON b.id = bi.booking_id
+       WHERE bi.room_id = $1`,
       [id]
     );
 
-    if (parseInt(bookingCheck.rows[0].count) > 0) {
+    const bookingCount = parseInt(bookingCheck.rows[0].count);
+    if (bookingCount > 0) {
+      const earliestCheckin = bookingCheck.rows[0].earliest_checkin;
+      const latestCheckout = bookingCheck.rows[0].latest_checkout;
+      
       res.status(409).json({ 
-        error: 'Cannot delete room with existing bookings. Please cancel all bookings first.' 
+        error: `Cannot delete room "${roomName}" because it has ${bookingCount} existing booking(s). Bookings range from ${new Date(earliestCheckin).toLocaleDateString()} to ${new Date(latestCheckout).toLocaleDateString()}. Please cancel all bookings first or contact support to archive this room instead.`
       });
       return;
     }
 
+    // Delete related records first (photos, reviews, etc.)
+    // Delete room photos
+    await db.query('DELETE FROM room_photos WHERE room_id = $1', [id]);
+    
     // Delete the room
     await db.query('DELETE FROM rooms WHERE id = $1', [id]);
 
@@ -407,12 +422,76 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req: AuthRequest, 
     // Handle foreign key constraint errors
     if (error && typeof error === 'object' && 'code' in error && error.code === '23503') {
       res.status(409).json({ 
-        error: 'Cannot delete room because it is referenced by other records' 
+        error: 'Cannot delete room because it is referenced by other records. Please contact support.' 
       });
       return;
     }
     
     res.status(500).json({ error: 'Failed to delete room' });
+  }
+});
+
+// Get hottest rooms (top 3 most booked, or available rooms if not enough bookings)
+router.get('/hottest/top', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    // First, try to get rooms with bookings (hottest)
+    const hottestQuery = `
+      SELECT r.*,
+             a.name as accommodation_name,
+             a.city as accommodation_city,
+             COUNT(bi.id) as booking_count,
+             COALESCE(json_agg(
+               DISTINCT jsonb_build_object('url', p.url, 'sort_order', p.sort_order, 'is_primary', p.is_primary)
+               ORDER BY p.is_primary DESC, p.sort_order ASC
+             ) FILTER (WHERE p.id IS NOT NULL), '[]') as photos
+      FROM rooms r
+      LEFT JOIN accommodations a ON a.id = r.accommodation_id
+      LEFT JOIN room_photos p ON p.room_id = r.id
+      LEFT JOIN booking_items bi ON bi.room_id = r.id
+      LEFT JOIN bookings b ON b.id = bi.booking_id AND b.status NOT IN ('cancelled', 'rejected')
+      WHERE r.status = 'available'
+      GROUP BY r.id, a.name, a.city
+      HAVING COUNT(bi.id) > 0
+      ORDER BY booking_count DESC, r.id DESC
+      LIMIT 3
+    `;
+
+    const hottestResult = await db.query(hottestQuery);
+    const hottestRooms = hottestResult.rows;
+
+    // If we have fewer than 3 rooms with bookings, fill with other available rooms
+    if (hottestRooms.length < 3) {
+      const excludeIds = hottestRooms.map((room: { id: number }) => room.id);
+      const remainingCount = 3 - hottestRooms.length;
+      
+      const fillQuery = `
+        SELECT r.*,
+               a.name as accommodation_name,
+               a.city as accommodation_city,
+               0 as booking_count,
+               COALESCE(json_agg(
+                 DISTINCT jsonb_build_object('url', p.url, 'sort_order', p.sort_order, 'is_primary', p.is_primary)
+                 ORDER BY p.is_primary DESC, p.sort_order ASC
+               ) FILTER (WHERE p.id IS NOT NULL), '[]') as photos
+        FROM rooms r
+        LEFT JOIN accommodations a ON a.id = r.accommodation_id
+        LEFT JOIN room_photos p ON p.room_id = r.id
+        WHERE r.status = 'available'
+        ${excludeIds.length > 0 ? 'AND r.id NOT IN (' + excludeIds.join(',') + ')' : ''}
+        GROUP BY r.id, a.name, a.city
+        ORDER BY r.id DESC
+        LIMIT $1
+      `;
+
+      const fillResult = await db.query(fillQuery, [remainingCount]);
+      const allRooms = [...hottestRooms, ...fillResult.rows];
+      res.json(allRooms);
+    } else {
+      res.json(hottestRooms);
+    }
+  } catch (error) {
+    console.error('Error fetching hottest rooms:', error);
+    res.status(500).json({ error: 'Failed to fetch hottest rooms', details: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 

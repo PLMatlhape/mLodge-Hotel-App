@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, XCircle, Loader2, AlertCircle } from 'lucide-react';
+import { Search, Loader2, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
@@ -341,7 +341,7 @@ export function AdminBookings() {
                       <td className="py-3 px-3">
                         {!isCancelled ? (
                           <Button
-                            variant="destructive"
+                            variant="default"
                             size="sm"
                             disabled={isLoading}
                             onClick={() => handleCancelAndRefund(booking.dbId, booking.id, booking.amount)}

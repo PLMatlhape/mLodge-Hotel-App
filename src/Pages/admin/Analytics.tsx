@@ -2,14 +2,14 @@ import { useState, useEffect } from 'react';
 import { Calendar as CalendarIcon, TrendingUp, Users, DollarSign, Loader2, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { LineChart, Line, BarChart, Bar, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import backgroundImage from '../../assets/image/background/Offers-section.jpeg';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { fetchDashboardStats, fetchBookingTrends, fetchRevenueTrends, fetchPerformanceStats, fetchRoomTypeDistribution, fetchBookingSources } from '../../store/slices/analyticsSlice';
 
 export function AdminAnalytics() {
   const dispatch = useAppDispatch();
-  const { dashboardStats, bookingTrends, performanceStats, roomTypeData, bookingSourceData, loading, error } = useAppSelector((state) => state.analytics);
+  const { dashboardStats, bookingTrends, performanceStats, loading, error } = useAppSelector((state) => state.analytics);
   
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year'>('year');
 

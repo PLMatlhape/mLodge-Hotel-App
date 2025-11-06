@@ -42,11 +42,20 @@ const Login: React.FC = () => {
       
       dispatch(loginSuccess(user));
       
-      // Navigate based on role
-      if (data.user.role === 'admin') {
-        navigate('/admin/overview');
+      // Check if there's a redirect path stored
+      const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+      
+      if (redirectPath) {
+        // Clear the redirect path and navigate to it
+        sessionStorage.removeItem('redirectAfterLogin');
+        navigate(redirectPath);
       } else {
-        navigate('/dashboard');
+        // Navigate based on role
+        if (data.user.role === 'admin') {
+          navigate('/admin/overview');
+        } else {
+          navigate('/dashboard');
+        }
       }
     } catch (error: unknown) {
       console.error('Login error:', error);

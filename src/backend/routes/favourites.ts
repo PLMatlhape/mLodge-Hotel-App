@@ -11,28 +11,28 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response): Prom
     const userId = req.user!.id;
 
     const result = await db.query(
-      `SELECT f.id as favourite_id,
+      `SELECT f.user_id,
+              f.accommodation_id,
               f.created_at as favourited_at,
               a.*,
-              COALESCE(json_agg(
-                DISTINCT jsonb_build_object('url', p.photo_url, 'is_primary', p.is_primary)
-              ) FILTER (WHERE p.id IS NOT NULL), '[]') as photos,
+              '[]'::json as photos,
               COALESCE(AVG(r.rating), 0) as avg_rating,
               COUNT(DISTINCT r.id) as review_count
        FROM favourites f
        JOIN accommodations a ON a.id = f.accommodation_id
-       LEFT JOIN photos p ON p.accommodation_id = a.id
        LEFT JOIN reviews r ON r.accommodation_id = a.id
        WHERE f.user_id = $1
-       GROUP BY f.id, f.created_at, a.id
+       GROUP BY f.user_id, f.accommodation_id, f.created_at, a.id
        ORDER BY f.created_at DESC`,
       [userId]
     );
 
     res.json(result.rows);
+    return;
   } catch (error) {
     console.error('Error fetching favourites:', error);
     res.status(500).json({ error: 'Failed to fetch favourites' });
+    return;
   }
 });
 
@@ -45,6 +45,7 @@ router.post('/', [
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       res.status(400).json({ errors: errors.array() });
+      return;
     }
 
     const { accommodation_id } = req.body;
@@ -52,12 +53,13 @@ router.post('/', [
 
     // Check if already favourited
     const existing = await db.query(
-      'SELECT id FROM favourites WHERE user_id = $1 AND accommodation_id = $2',
+      'SELECT user_id FROM favourites WHERE user_id = $1 AND accommodation_id = $2',
       [userId, accommodation_id]
     );
 
     if (existing.rows.length > 0) {
       res.status(400).json({ error: 'Already in favourites' });
+      return;
     }
 
     // Check if accommodation exists
@@ -68,6 +70,7 @@ router.post('/', [
 
     if (accommodation.rows.length === 0) {
       res.status(404).json({ error: 'Accommodation not found' });
+      return;
     }
 
     const result = await db.query(
@@ -76,9 +79,11 @@ router.post('/', [
     );
 
     res.status(201).json(result.rows[0]);
+    return;
   } catch (error) {
     console.error('Error adding favourite:', error);
     res.status(500).json({ error: 'Failed to add favourite' });
+    return;
   }
 });
 
@@ -95,12 +100,15 @@ router.delete('/:accommodationId', authenticateToken, async (req: AuthRequest, r
 
     if (result.rows.length === 0) {
       res.status(404).json({ error: 'Favourite not found' });
+      return;
     }
 
     res.json({ message: 'Removed from favourites' });
+    return;
   } catch (error) {
     console.error('Error removing favourite:', error);
     res.status(500).json({ error: 'Failed to remove favourite' });
+    return;
   }
 });
 
@@ -113,6 +121,7 @@ router.post('/toggle', [
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       res.status(400).json({ errors: errors.array() });
+      return;
     }
 
     const { accommodation_id } = req.body;
@@ -120,7 +129,7 @@ router.post('/toggle', [
 
     // Check if exists
     const existing = await db.query(
-      'SELECT id FROM favourites WHERE user_id = $1 AND accommodation_id = $2',
+      'SELECT user_id FROM favourites WHERE user_id = $1 AND accommodation_id = $2',
       [userId, accommodation_id]
     );
 
@@ -130,14 +139,16 @@ router.post('/toggle', [
         'DELETE FROM favourites WHERE user_id = $1 AND accommodation_id = $2',
         [userId, accommodation_id]
       );
-      return res.json({ action: 'removed', is_favourite: false });
+      res.json({ action: 'removed', is_favourite: false });
+      return;
     } else {
       // Add
       await db.query(
         'INSERT INTO favourites (user_id, accommodation_id) VALUES ($1, $2)',
         [userId, accommodation_id]
       );
-      return res.json({ action: 'added', is_favourite: true });
+      res.json({ action: 'added', is_favourite: true });
+      return;
     }
   } catch (error) {
     console.error('Error toggling favourite:', error);
@@ -152,14 +163,16 @@ router.get('/check/:accommodationId', authenticateToken, async (req: AuthRequest
     const userId = req.user!.id;
 
     const result = await db.query(
-      'SELECT id FROM favourites WHERE user_id = $1 AND accommodation_id = $2',
+      'SELECT user_id FROM favourites WHERE user_id = $1 AND accommodation_id = $2',
       [userId, accommodationId]
     );
 
     res.json({ is_favourite: result.rows.length > 0 });
+    return;
   } catch (error) {
     console.error('Error checking favourite:', error);
     res.status(500).json({ error: 'Failed to check favourite status' });
+    return;
   }
 });
 

@@ -13,8 +13,8 @@ router.get('/accommodation/:accommodationId', [
 ], async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { accommodationId } = req.params;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const page = parseInt((req.query.page as string) || '1');
+    const limit = parseInt((req.query.limit as string) || '10');
     const offset = (page - 1) * limit;
 
     const result = await db.query(

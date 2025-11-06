@@ -47,7 +47,11 @@ export function AdminAuditLogs() {
 
   const handleExportLogs = async () => {
     try {
-      await dispatch(exportAuditLogs()).unwrap();
+      await dispatch(exportAuditLogs({
+        module: filterModule !== 'all' ? filterModule : undefined,
+        action: filterAction !== 'all' ? filterAction : undefined,
+        format: 'csv'
+      })).unwrap();
       toast.success('Audit logs exported successfully');
     } catch (error) {
       toast.error('Failed to export logs');

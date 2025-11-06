@@ -26,6 +26,9 @@
   ],
   "exclude": [
     "node_modules",
-    "dist"
+    "dist",
+    "scripts/initDatabase.ts",
+    "scripts/insertDummyRefunds.ts",
+    "scripts/setupRoutes.ts"
   ]
 }

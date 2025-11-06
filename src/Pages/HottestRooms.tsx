@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { fetchRooms } from '../store/slices/roomsSlice';
+import { fetchHottestRooms } from '../store/slices/roomsSlice';
 // Amenities Icons
 import wifiIcon from '../assets/icons/white/white-wifi-icon.png';
 import carIcon from '../assets/icons/white/white-car-icon.png';
@@ -42,23 +42,14 @@ const HottestRooms: React.FC<HottestRoomsProps> = ({ onRoomClick }) => {
   const dispatch = useAppDispatch();
   const { rooms: reduxRooms } = useAppSelector((state) => state.rooms);
 
-  // Fetch rooms from database on component mount
+  // Fetch hottest rooms (top 3 most booked) from database on component mount
   useEffect(() => {
-    dispatch(fetchRooms());
+    dispatch(fetchHottestRooms());
   }, [dispatch]);
 
   // Transform Redux rooms to match the Room interface
-  // Only show available rooms with photos on client side
-  const rooms: Room[] = reduxRooms
-    .filter((room) => {
-      const roomData = room as unknown as Record<string, unknown>;
-      const photos = (roomData.photos as Array<{ url: string; is_primary: boolean }>) || [];
-      const status = roomData.status as string;
-      
-      // Only show rooms that are available and have at least one photo
-      return status === 'available' && photos.length > 0;
-    })
-    .map((room) => {
+  // Backend already returns only the top 3 most booked available rooms
+  const rooms: Room[] = reduxRooms.map((room) => {
     const roomData = room as unknown as Record<string, unknown>;
     const photos = (roomData.photos as Array<{ url: string; is_primary: boolean }>) || [];
     const firstPhoto = photos[0]?.url || '';
@@ -131,7 +122,7 @@ const HottestRooms: React.FC<HottestRoomsProps> = ({ onRoomClick }) => {
               Hottest Rooms to Book
             </h2>
             <p className="text-white text-xl font-light">
-              Discover our most sought-after accommodations designed for your ultimate comfort
+              Featuring our most booked rooms and best available accommodations
             </p>
           </div>
 

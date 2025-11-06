@@ -59,6 +59,15 @@ export const fetchRooms = createAsyncThunk(
   }
 );
 
+// Fetch hottest rooms (top 3 most booked)
+export const fetchHottestRooms = createAsyncThunk(
+  'rooms/fetchHottestRooms',
+  async () => {
+    const response = await roomsAPI.getHottest();
+    return response.data;
+  }
+);
+
 // Fetch list of accommodations for dropdown
 export const fetchAccommodationsList = createAsyncThunk(
   'rooms/fetchAccommodationsList',
@@ -147,6 +156,19 @@ const roomsSlice = createSlice({
       .addCase(fetchRooms.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message || 'Failed to fetch rooms';
+      })
+      // Fetch hottest rooms
+      .addCase(fetchHottestRooms.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchHottestRooms.fulfilled, (state, action) => {
+        state.loading = false;
+        state.rooms = action.payload;
+      })
+      .addCase(fetchHottestRooms.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to fetch hottest rooms';
       })
       // Fetch accommodations list
       .addCase(fetchAccommodationsList.pending, (state) => {

@@ -34,7 +34,7 @@ router.get('/profile', authenticateToken, async (req: AuthRequest, res: Response
 router.put('/profile', [
   authenticateToken,
   body('name').optional().trim().isLength({ min: 2, max: 100 }),
-  body('phone').optional().trim().isMobilePhone()
+  body('phone').optional().trim().isMobilePhone('any')
 ], async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);

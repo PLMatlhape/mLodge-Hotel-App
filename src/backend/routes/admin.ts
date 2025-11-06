@@ -259,11 +259,12 @@ router.get('/health', authenticateToken, requireAdmin, async (req: AuthRequest, 
     };
 
     res.json(systemInfo);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Health check error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     res.status(500).json({
       status: 'unhealthy',
-      error: error.message
+      error: errorMessage
     });
   }
 });

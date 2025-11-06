@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAppSelector } from '../../store/hooks';
+import { useAppSelector, useAppDispatch } from '../../store/hooks';
+import { toggleFavourite, fetchFavourites } from '../../store/slices/favouritesSlice';
 import { toast } from '../../lib/toast';
 import starIcon from '../../assets/icons/yellow-star-rate-icon.png';
 import heartIcon from '../../assets/icons/yellow-heart-icon.png';
@@ -49,10 +50,17 @@ interface RoomDetailsProps {
 
 const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const { favourites } = useAppSelector((state) => state.favourites);
   
   // Get today's date in YYYY-MM-DD format
   const today = new Date().toISOString().split('T')[0];
+  
+  // Check if this room's accommodation is favorited
+  const isFavorite = room.accommodation_id 
+    ? favourites.some(fav => fav.id === room.accommodation_id) 
+    : false;
   
   // Get room images from photos array or fallback
   const roomImages = room.photos && room.photos.length > 0 
@@ -85,14 +93,38 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
   };
 
   // Handle favorite toggle
-  const handleFavoriteClick = () => {
+  const handleFavoriteClick = async () => {
     if (!isAuthenticated) {
+      // Store current page path for redirect after login
+      sessionStorage.setItem('redirectAfterLogin', window.location.pathname);
+      toast.error('Please login to add to favorites');
       onClose(); // Close the modal first
       navigate('/login');
       return;
     }
-    // TODO: Implement favorite toggle with Redux when connected
-    alert('Favorite functionality will be implemented when Redux is connected');
+    
+    if (!room.accommodation_id) {
+      toast.error('Unable to add to favorites');
+      return;
+    }
+
+    try {
+      // Toggle favorite in backend
+      const result = await dispatch(toggleFavourite(room.accommodation_id)).unwrap();
+      
+      // Refetch favorites to update the UI
+      await dispatch(fetchFavourites()).unwrap();
+      
+      // Show appropriate message based on action
+      if (result.action === 'added') {
+        toast.success('Added to favorites');
+      } else {
+        toast.success('Removed from favorites');
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      toast.error('Failed to update favorites');
+    }
   };
 
   // Calculate nights based on check-in and check-out dates
@@ -172,7 +204,20 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
     // Check authentication first
     if (!isAuthenticated) {
       console.log('User not authenticated, redirecting to login');
+      
+      // Store the booking intent with all parameters
+      const bookingIntent = {
+        roomId: room.id,
+        accommodationId: room.accommodation_id || 0,
+        checkInDate,
+        checkOutDate,
+        returnToBooking: true
+      };
+      sessionStorage.setItem('bookingIntent', JSON.stringify(bookingIntent));
+      sessionStorage.setItem('redirectAfterLogin', `/dashboard`); // Return to dashboard so they can view the room again
+      
       toast.error('Please login to book a room');
+      onClose(); // Close modal before redirecting
       navigate('/login');
       return;
     }
@@ -286,9 +331,18 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
                   {/* Favorite */}
                   <button 
                     onClick={handleFavoriteClick}
-                    className="absolute bottom-4 right-4 w-12 h-12 bg-white rounded-full flex items-center justify-center hover:scale-110 transition-transform"
+                    className="absolute bottom-4 right-4 p-1 transition-all hover:scale-110"
+                    aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
                   >
-                    <img src={heartIcon} alt="Favorite" className="w-6 h-6" />
+                    <img 
+                      src={heartIcon} 
+                      alt="Favorite" 
+                      className={`w-8 h-8 transition-all ${
+                        isFavorite 
+                          ? 'brightness-100 saturate-150 drop-shadow-md' 
+                          : 'brightness-[10] saturate-0 opacity-90 hover:scale-105'
+                      }`}
+                    />
                   </button>
                 </div>
 

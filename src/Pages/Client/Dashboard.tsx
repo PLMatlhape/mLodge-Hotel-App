@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { logout } from '../../store/slices/authSlice';
-import { fetchRooms, selectRoom as selectRoomAction } from '../../store/slices/roomsSlice';
+import { fetchRooms } from '../../store/slices/roomsSlice';
+import { fetchFavourites, toggleFavourite } from '../../store/slices/favouritesSlice';
+import { toast } from '../../lib/toast';
 import logo from '../../assets/image/Erxtras/Logo-mLodge-hotel.png';
 import searchIcon from '../../assets/icons/black/black-search-icon.png';
 import filterIcon from '../../assets/icons/black/black-filter-icon.png';
 import starIcon from '../../assets/icons/yellow-star-rate-icon.png';
-import yellowHeartIcon from '../../assets/icons/yellow-heart-icon.png';
+import heartIcon from '../../assets/icons/yellow-heart-icon.png';
 import bathIcon from '../../assets/icons/black/black-bath-icon.png';
 import backgroundImage from '../../assets/image/background/Client-Page.jpeg';
 import RoomDetails from './RoomDetails';
@@ -35,6 +37,7 @@ const Dashboard: React.FC = () => {
   const dispatch = useAppDispatch();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   const { rooms: reduxRooms, loading, error } = useAppSelector((state) => state.rooms);
+  const { favourites } = useAppSelector((state) => state.favourites);
   
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -44,18 +47,24 @@ const Dashboard: React.FC = () => {
   const [selectedLocation, setSelectedLocation] = useState('All locations');
   const [selectedTier, setSelectedTier] = useState('All Tiers');
   const [guestCount, setGuestCount] = useState('');
-  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
-  // Fetch accommodations on component mount
+  // Fetch accommodations and favourites on component mount
   useEffect(() => {
     dispatch(fetchRooms());
-  }, [dispatch]);
+    if (isAuthenticated) {
+      dispatch(fetchFavourites());
+    }
+  }, [dispatch, isAuthenticated]);
 
   // Transform Redux rooms to match display format
   const rooms = reduxRooms.map((room) => {
     const roomData = room as unknown as Record<string, unknown>;
     const photos = (roomData.photos as Array<{ url: string; sort_order?: number }>) || [];
     const firstPhoto = photos[0]?.url || '/placeholder-room.svg';
+    
+    // Check if this accommodation is in favorites
+    const accommodationId = roomData.accommodation_id as number | undefined;
+    const isFavorite = accommodationId ? favourites.some(fav => fav.id === accommodationId) : false;
     
     return {
       id: roomData.id as number,
@@ -80,20 +89,67 @@ const Dashboard: React.FC = () => {
       type: (roomData.type as string) || 'Standard',
       amenities: (roomData.amenities as string[]) || [],
       roomFeatures: (roomData.room_features as string[]) || [],
-      favorite: false
+      favorite: isFavorite
     };
   });
 
-  const toggleFavoriteLocal = (roomId: number) => {
+  // Handle booking intent after login (separate effect after rooms is defined)
+  useEffect(() => {
+    if (isAuthenticated && rooms.length > 0) {
+      const bookingIntentStr = sessionStorage.getItem('bookingIntent');
+      if (bookingIntentStr) {
+        try {
+          const bookingIntent = JSON.parse(bookingIntentStr);
+          // Clear the booking intent
+          sessionStorage.removeItem('bookingIntent');
+          
+          // Find and open the room
+          const room = rooms.find(r => r.id === bookingIntent.roomId);
+          if (room) {
+            setSelectedRoom(room);
+            toast.success('Please continue with your booking');
+          }
+        } catch (error) {
+          console.error('Error parsing booking intent:', error);
+        }
+      }
+    }
+  }, [isAuthenticated, rooms]);
+
+  const toggleFavoriteLocal = async (roomId: number) => {
     // Check if user is authenticated before allowing favorite toggle
     if (!isAuthenticated) {
+      // Store the current path to redirect back after login
+      sessionStorage.setItem('redirectAfterLogin', window.location.pathname);
+      toast.error('Please login to add favorites');
       navigate('/login');
       return;
     }
 
-    // TODO: Call backend API to toggle favorite
-    // For now, just dispatch to Redux
-    dispatch(selectRoomAction(rooms.find(r => r.id === roomId) || null));
+    // Find the room to get its accommodation_id
+    const room = rooms.find(r => r.id === roomId);
+    if (!room || !room.accommodation_id) {
+      toast.error('Unable to add to favorites');
+      return;
+    }
+
+    try {
+      // Toggle favorite in backend
+      const result = await dispatch(toggleFavourite(room.accommodation_id)).unwrap();
+      
+      // Refetch favorites to update the UI
+      await dispatch(fetchFavourites()).unwrap();
+      
+      // Show appropriate message based on action
+      if (result.action === 'added') {
+        toast.success('Added to favorites');
+      } else {
+        toast.success('Removed from favorites');
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      toast.error('Failed to update favorites');
+    }
   };
 
   const filteredRooms = rooms.filter(room => {
@@ -104,9 +160,8 @@ const Dashboard: React.FC = () => {
                            (room.accommodation_city && room.accommodation_city === selectedLocation);
     const matchesTier = selectedTier === 'All Tiers' || room.badge === selectedTier;
     const matchesGuests = !guestCount || parseInt(room.guests.match(/\d+/)?.[0] || '0') >= parseInt(guestCount);
-    const matchesFavorites = !showFavoritesOnly || room.favorite;
 
-    return matchesSearch && matchesPrice && matchesLocation && matchesTier && matchesGuests && matchesFavorites;
+    return matchesSearch && matchesPrice && matchesLocation && matchesTier && matchesGuests;
   });
 
   const favoriteRooms = rooms.filter(room => room.favorite);
@@ -170,6 +225,7 @@ const Dashboard: React.FC = () => {
             <button
               onClick={() => setMenuOpen(!menuOpen)}
               className="flex flex-col gap-1.5 p-2 bg-[#0F51AF] rounded-lg hover:bg-[#0d4291] transition-colors"
+              aria-label="Toggle menu"
             >
               <span className="w-6 h-0.5 bg-white rounded"></span>
               <span className="w-6 h-0.5 bg-white rounded"></span>
@@ -190,7 +246,7 @@ const Dashboard: React.FC = () => {
                 </button>
                 <button
                   onClick={() => {
-                    setShowFavoritesOnly(!showFavoritesOnly);
+                    navigate('/favourites');
                     setMenuOpen(false);
                   }}
                   className="w-full px-4 py-3 text-left text-gray-700 hover:bg-gray-100 transition-colors flex items-center justify-between gap-3 border-t"
@@ -201,11 +257,6 @@ const Dashboard: React.FC = () => {
                     </svg>
                     <span>Favorites ({favoriteRooms.length})</span>
                   </div>
-                  {showFavoritesOnly && (
-                    <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                    </svg>
-                  )}
                 </button>
                 <button
                   onClick={handleLogout}
@@ -425,17 +476,20 @@ const Dashboard: React.FC = () => {
 
                     {/* Favorite */}
                     <button 
-                      onClick={() => toggleFavoriteLocal(room.id)}
-                      className={`absolute bottom-3 right-3 w-12 h-12 rounded-full flex items-center justify-center transition-all ${
-                        room.favorite ? 'bg-yellow-500 scale-110' : 'bg-white/90 backdrop-blur-sm hover:bg-white hover:scale-105'
-                      }`}
-                      aria-label="Add to favorites"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavoriteLocal(room.id);
+                      }}
+                      className="absolute bottom-3 right-3 p-1 transition-all hover:scale-110"
+                      aria-label={room.favorite ? "Remove from favorites" : "Add to favorites"}
                     >
                       <img 
-                        src={yellowHeartIcon} 
+                        src={heartIcon} 
                         alt="Favorite" 
-                        className={`w-7 h-7 transition-all ${
-                          room.favorite ? 'opacity-100' : 'opacity-60 grayscale'
+                        className={`w-8 h-8 transition-all ${
+                          room.favorite 
+                            ? 'brightness-100 saturate-150 drop-shadow-md' 
+                            : 'brightness-[10] saturate-0 opacity-90 hover:scale-105'
                         }`}
                       />
                     </button>
@@ -489,7 +543,7 @@ const Dashboard: React.FC = () => {
                         onClick={() => setSelectedRoom(room)}
                         className="bg-[#0F51AF] text-white px-4 py-2 rounded-lg hover:bg-[#0d4291] transition-colors font-medium text-sm"
                       >
-                        View Details
+                        View
                       </button>
                     </div>
                   </div>

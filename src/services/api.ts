@@ -192,16 +192,17 @@ export const accommodationsAPI = {
 
 // Rooms API
 export const roomsAPI = {
-  getAll: () =>
+  getAll: () => 
     api.get<Room[]>('/rooms'),
+  
+  getHottest: () => 
+    api.get<Room[]>('/rooms/hottest/top'),
   
   getByAccommodation: (accommodationId: number, params?: {
     checkIn?: string;
     checkOut?: string;
     guests?: number;
-  }) => api.get<Room[]>(`/rooms/accommodation/${accommodationId}`, { params }),
-  
-  getById: (id: number) => 
+  }) => api.get<Room[]>(`/rooms/accommodation/${accommodationId}`, { params }),  getById: (id: number) => 
     api.get<Room>(`/rooms/${id}`),
   
   create: (data: Partial<Room>) => 
