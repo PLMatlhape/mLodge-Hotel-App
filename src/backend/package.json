@@ -7,7 +7,9 @@
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only server.ts",
     "build": "tsc",
-    "init-db": "ts-node scripts/initDatabase.ts"
+    "init-db": "ts-node scripts/initDatabase.ts",
+    "migrate:rooms": "ts-node scripts/migrateRoomFields.ts",
+    "migrate:photos": "ts-node scripts/createPhotosTable.ts"
   },
   "keywords": [
     "hotel",

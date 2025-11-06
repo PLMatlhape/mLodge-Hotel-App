@@ -25,42 +25,95 @@ export function AdminOverview() {
     dispatch(fetchRecentBookings(5));
   }, [dispatch]);
 
+  // Helper function to format currency with appropriate suffix
+  const formatCurrency = (amount: number): string => {
+    if (amount >= 1000000000) {
+      return `R ${(amount / 1000000000).toFixed(1)}B`; // Billion
+    } else if (amount >= 100000000) {
+      return `R ${(amount / 1000000).toFixed(0)}M`; // 100M+
+    } else if (amount >= 1000000) {
+      return `R ${(amount / 1000000).toFixed(1)}M`; // Million
+    } else if (amount >= 100000) {
+      return `R ${(amount / 1000).toFixed(0)}K`; // 100K+ (not HT)
+    } else if (amount >= 10000) {
+      return `R ${(amount / 1000).toFixed(1)}K`; // 10K+
+    } else if (amount >= 1000) {
+      return `R ${(amount / 1000).toFixed(2)}K`; // 1K+
+    } else {
+      return `R ${amount.toFixed(2)}`; // Less than 1000
+    }
+  };
+
+  // Helper function to calculate percentage change
+  const calculateChange = (current: number, previous: number): { change: string; trend: 'up' | 'down' } => {
+    if (previous === 0) {
+      return { change: current > 0 ? '+100%' : '0%', trend: current > 0 ? 'up' : 'down' };
+    }
+    const percentChange = ((current - previous) / previous) * 100;
+    const sign = percentChange >= 0 ? '+' : '';
+    return {
+      change: `${sign}${percentChange.toFixed(1)}%`,
+      trend: percentChange >= 0 ? 'up' : 'down',
+    };
+  };
+
+  // Calculate growth percentages from booking trends
+  const calculateGrowthMetrics = () => {
+    if (!bookingTrends || bookingTrends.length < 2) {
+      return {
+        bookingsChange: { change: '0%', trend: 'up' as const },
+        revenueChange: { change: '0%', trend: 'up' as const },
+      };
+    }
+
+    // Get current month (last item) and previous month
+    const currentMonth = bookingTrends[bookingTrends.length - 1];
+    const previousMonth = bookingTrends[bookingTrends.length - 2];
+
+    return {
+      bookingsChange: calculateChange(currentMonth.bookings, previousMonth.bookings),
+      revenueChange: calculateChange(currentMonth.revenue, previousMonth.revenue),
+    };
+  };
+
+  const growthMetrics = calculateGrowthMetrics();
+
   // Prepare stats data from Redux state
   const statsData = dashboardStats
     ? [
         {
           icon: Calendar,
           label: 'Total Bookings',
-          value: dashboardStats.totalBookings.toLocaleString(),
-          change: '+12.5%',
-          trend: 'up' as const,
+          value: dashboardStats.totalBookings?.toLocaleString() || '0',
+          change: growthMetrics.bookingsChange.change,
+          trend: growthMetrics.bookingsChange.trend,
         },
         {
           icon: DollarSign,
           label: 'Revenue',
-          value: `R ${(dashboardStats.totalRevenue / 1000000).toFixed(1)}M`,
-          change: '+18.2%',
-          trend: 'up' as const,
+          value: formatCurrency(dashboardStats.totalRevenue || 0),
+          change: growthMetrics.revenueChange.change,
+          trend: growthMetrics.revenueChange.trend,
         },
         {
           icon: Users,
           label: 'Total Guests',
-          value: dashboardStats.totalGuests.toLocaleString(),
-          change: '+8.3%',
+          value: dashboardStats.totalGuests?.toLocaleString() || '0',
+          change: '0%',
           trend: 'up' as const,
         },
         {
           icon: Hotel,
           label: 'Occupancy Rate',
-          value: `${dashboardStats.occupancyRate}%`,
-          change: '+5.1%',
+          value: `${dashboardStats.occupancyRate || 0}%`,
+          change: '0%',
           trend: 'up' as const,
         },
         {
           icon: Star,
           label: 'Avg Rating',
-          value: dashboardStats.averageRating.toFixed(1),
-          change: '+0.2',
+          value: (dashboardStats.averageRating || 0).toFixed(1),
+          change: '0',
           trend: 'up' as const,
         },
       ]
@@ -76,7 +129,7 @@ export function AdminOverview() {
   // Loading state
   if (loading && !dashboardStats) {
     return (
-      <div className="relative p-4 sm:p-6 space-y-4 sm:space-y-6 min-h-screen">
+      <div className="relative min-h-screen">
         <div 
           className="fixed inset-0 bg-cover bg-center"
           style={{ 
@@ -91,12 +144,14 @@ export function AdminOverview() {
             zIndex: -1
           }}
         />
-        <Card className="bg-gray-light border-gray-text/20">
-          <CardContent className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-primary" />
-            <span className="ml-3 text-gray-text">Loading analytics data...</span>
-          </CardContent>
-        </Card>
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+          <Card className="bg-gray-light border-gray-text/20">
+            <CardContent className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-primary" />
+              <span className="ml-3 text-gray-text">Loading analytics data...</span>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -104,7 +159,7 @@ export function AdminOverview() {
   // Error state
   if (error) {
     return (
-      <div className="relative p-4 sm:p-6 space-y-4 sm:space-y-6 min-h-screen">
+      <div className="relative min-h-screen">
         <div 
           className="fixed inset-0 bg-cover bg-center"
           style={{ 
@@ -119,20 +174,22 @@ export function AdminOverview() {
             zIndex: -1
           }}
         />
-        <Card className="bg-red-50 border-red-200">
-          <CardContent className="flex items-center py-4">
-            <AlertCircle className="h-5 w-5 text-red-600 mr-3" />
-            <div>
-              <p className="text-red-800 font-medium">Error loading analytics</p>
-              <p className="text-red-600 text-sm">{error}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+          <Card className="bg-red-50 border-red-200">
+            <CardContent className="flex items-center py-4">
+              <AlertCircle className="h-5 w-5 text-red-600 mr-3" />
+              <div>
+                <p className="text-red-800 font-medium">Error loading analytics</p>
+                <p className="text-red-600 text-sm">{error}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
   return (
-    <div className="relative p-4 sm:p-6 space-y-4 sm:space-y-6 min-h-screen">
+    <div className="relative min-h-screen">
       {/* Background Image */}
       <div 
         className="fixed inset-0 bg-cover bg-center"
@@ -150,13 +207,15 @@ export function AdminOverview() {
         }}
       />
       
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 text-white">Dashboard Overview</h1>
-        <p className="text-sm sm:text-base text-white">Welcome back, Admin. Here's what's happening today.</p>
-      </div>
+      {/* Content with padding */}
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 text-white">Dashboard Overview</h1>
+          <p className="text-sm sm:text-base text-white">Welcome back, Admin. Here's what's happening today.</p>
+        </div>
 
-      {/* Stats Cards */}
+        {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
         {statsData.map((stat, index) => {
           const Icon = stat.icon;
@@ -276,6 +335,7 @@ export function AdminOverview() {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

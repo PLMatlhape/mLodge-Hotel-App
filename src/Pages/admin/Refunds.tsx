@@ -79,7 +79,7 @@ export function AdminRefunds() {
 
   const handleProcess = async (refundId: number) => {
     try {
-      await dispatch(processRefund({ id: refundId, adminNotes })).unwrap();
+      await dispatch(processRefund(refundId)).unwrap();
       toast.success('Refund processed successfully');
       setIsDialogOpen(false);
       setAdminNotes('');
@@ -404,11 +404,10 @@ export function AdminRefunds() {
                 <div className="p-4 rounded-lg bg-white">
                   <p className="text-gray-text text-sm">
                     This refund has been {selectedRefund.status.toLowerCase()}.
-                    {selectedRefund.processedDate && ` Processed on: ${selectedRefund.processedDate}`}
-                    {selectedRefund.rejectedDate && ` Rejected on: ${selectedRefund.rejectedDate}`}
+                    {selectedRefund.processed_date && ` Processed on: ${new Date(selectedRefund.processed_date).toLocaleDateString()}`}
                   </p>
-                  {selectedRefund.rejectionReason && (
-                    <p className="text-black mt-2">Reason: {selectedRefund.rejectionReason}</p>
+                  {selectedRefund.rejection_reason && (
+                    <p className="text-black mt-2">Reason: {selectedRefund.rejection_reason}</p>
                   )}
                 </div>
               )}

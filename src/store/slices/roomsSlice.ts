@@ -4,45 +4,73 @@ import { accommodationsAPI, roomsAPI } from '../../services/api';
 
 interface Room {
   id: number;
+  accommodation_id?: number;
   name: string;
-  location: string;
+  location?: string;
+  description?: string;
+  capacity: number;
   beds: number;
-  baths: number;
-  area: number;
-  guests: string;
-  price: number;
-  rating: number;
-  image: string;
-  images?: string[];
-  badge: string;
-  favorite: boolean;
-  available?: boolean;
+  baths?: number;
+  area?: number;
   type?: string;
+  price_per_night: number;
+  refundable: boolean;
+  photos?: Array<{ url: string; is_primary: boolean }>;
+  accommodation_name?: string;
   amenities?: string[];
+  roomFeatures?: string[];
+  is_active?: boolean;
+  status?: string;
+}
+
+interface Accommodation {
+  id: number;
+  name: string;
+  city: string;
+  description?: string;
+  star_rating?: number;
 }
 
 interface RoomsState {
   rooms: Room[];
+  accommodations: Accommodation[];
   selectedRoom: Room | null;
-  favorites: number[];
   loading: boolean;
   error: string | null;
 }
 
 const initialState: RoomsState = {
   rooms: [],
+  accommodations: [],
   selectedRoom: null,
-  favorites: [],
   loading: false,
   error: null,
 };
 
-// Async thunk to fetch accommodations from backend
+// Fetch all rooms (for inventory management)
+export const fetchRooms = createAsyncThunk(
+  'rooms/fetchRooms',
+  async () => {
+    const response = await roomsAPI.getAll();
+    return response.data;
+  }
+);
+
+// Fetch list of accommodations for dropdown
+export const fetchAccommodationsList = createAsyncThunk(
+  'rooms/fetchAccommodationsList',
+  async () => {
+    const response = await accommodationsAPI.getAll({});
+    return response.data;
+  }
+);
+
+// Fetch accommodations with rooms for client display (backwards compatibility)
 export const fetchAccommodations = createAsyncThunk(
   'rooms/fetchAccommodations',
-  async (params?: { city?: string; search?: string; page?: number; limit?: number }) => {
-    const response = await accommodationsAPI.getAll(params);
-    return response.data;
+  async (params?: { city?: string; search?: string }) => {
+    const response = await accommodationsAPI.getAll(params || {});
+    return response;
   }
 );
 
@@ -83,22 +111,6 @@ const roomsSlice = createSlice({
     selectRoom: (state, action: PayloadAction<Room | null>) => {
       state.selectedRoom = action.payload;
     },
-    toggleFavorite: (state, action: PayloadAction<number>) => {
-      const roomId = action.payload;
-      const index = state.favorites.indexOf(roomId);
-      
-      if (index > -1) {
-        state.favorites.splice(index, 1);
-      } else {
-        state.favorites.push(roomId);
-      }
-      
-      // Update room favorite status
-      const room = state.rooms.find(r => r.id === roomId);
-      if (room) {
-        room.favorite = !room.favorite;
-      }
-    },
     addRoom: (state, action: PayloadAction<Room>) => {
       state.rooms.push(action.payload);
     },
@@ -120,30 +132,42 @@ const roomsSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      // Fetch all rooms
+      .addCase(fetchRooms.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchRooms.fulfilled, (state, action) => {
+        state.loading = false;
+        state.rooms = action.payload;
+      })
+      .addCase(fetchRooms.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to fetch rooms';
+      })
+      // Fetch accommodations list
+      .addCase(fetchAccommodationsList.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchAccommodationsList.fulfilled, (state, action) => {
+        state.loading = false;
+        state.accommodations = action.payload;
+      })
+      .addCase(fetchAccommodationsList.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to fetch accommodations';
+      })
+      // Fetch accommodations (client-side with rooms)
       .addCase(fetchAccommodations.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
       .addCase(fetchAccommodations.fulfilled, (state, action) => {
         state.loading = false;
-        // Transform backend data to match frontend Room interface
+        // For client display, store accommodations data
         if (action.payload.data) {
-          state.rooms = action.payload.data.map((acc: any) => ({
-            id: acc.id,
-            name: acc.name,
-            location: acc.city,
-            beds: 1, // Default value
-            baths: 1, // Default value
-            area: 50, // Default value
-            guests: "upto 2 guests", // Default value
-            price: 2000, // Default value
-            rating: parseFloat(acc.avg_rating) || 0,
-            image: acc.photos?.[0] || '',
-            images: acc.photos || [],
-            badge: acc.star_rating >= 5 ? 'Premium' : acc.star_rating >= 4 ? 'Delux' : 'Standard',
-            favorite: acc.is_favorite || false,
-            available: acc.is_active,
-          }));
+          state.accommodations = action.payload.data;
         }
       })
       .addCase(fetchAccommodations.rejected, (state, action) => {
@@ -198,5 +222,5 @@ const roomsSlice = createSlice({
   },
 });
 
-export const { setRooms, selectRoom, toggleFavorite, addRoom, updateRoom, deleteRoom, setLoading, setError } = roomsSlice.actions;
+export const { setRooms, selectRoom, addRoom, updateRoom, deleteRoom, setLoading, setError } = roomsSlice.actions;
 export default roomsSlice.reducer;

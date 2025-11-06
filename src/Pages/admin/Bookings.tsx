@@ -11,6 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { toast } from '../../lib/toast';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { fetchAllBookings, updateBookingStatusAsync } from '../../store/slices/bookingsSlice';
+import backgroundImage from '../../assets/image/background/Offers-section.jpeg';
 
 // Transform Redux booking to display format
 interface DisplayBooking {
@@ -43,19 +44,21 @@ export function AdminBookings() {
   }, [dispatch]);
 
   // Transform Redux bookings to display format
-  const bookings: DisplayBooking[] = reduxBookings.map((booking) => ({
-    id: booking.id,
-    guest: `${booking.guestInfo.firstName} ${booking.guestInfo.lastName}`,
-    email: booking.guestInfo.email,
-    room: booking.roomName,
-    roomType: 'Standard', // Default since Redux doesn't have this field
-    checkIn: booking.checkInDate,
-    checkOut: booking.checkOutDate,
-    nights: booking.nights,
-    amount: booking.totalPrice,
-    status: booking.status.charAt(0).toUpperCase() + booking.status.slice(1), // Capitalize
-    date: booking.createdAt,
-  }));
+  const bookings: DisplayBooking[] = Array.isArray(reduxBookings) 
+    ? reduxBookings.map((booking) => ({
+        id: booking.id,
+        guest: `${booking.guestInfo.firstName} ${booking.guestInfo.lastName}`,
+        email: booking.guestInfo.email,
+        room: booking.roomName,
+        roomType: 'Standard', // Default since Redux doesn't have this field
+        checkIn: booking.checkInDate,
+        checkOut: booking.checkOutDate,
+        nights: booking.nights,
+        amount: booking.totalPrice,
+        status: booking.status.charAt(0).toUpperCase() + booking.status.slice(1), // Capitalize
+        date: booking.createdAt,
+      }))
+    : [];
 
   const filteredBookings = bookings.filter(booking => {
     const matchesSearch = 
@@ -106,7 +109,23 @@ export function AdminBookings() {
   // Loading state
   if (loading && bookings.length === 0) {
     return (
-      <div className="p-6 space-y-6" style={{ backgroundColor: 'rgba(0, 28, 67, 0.05)' }}>
+      <div className="relative min-h-screen p-6 space-y-6">
+        {/* Background Image */}
+        <div 
+          className="fixed inset-0 bg-cover bg-center"
+          style={{ 
+            backgroundImage: `url(${backgroundImage})`,
+            zIndex: -2
+          }}
+        />
+        {/* Overlay */}
+        <div 
+          className="fixed inset-0"
+          style={{ 
+            backgroundColor: 'rgba(0, 28, 67, 0.5)',
+            zIndex: -1
+          }}
+        />
         <Card style={{ backgroundColor: '#D9D9D9', borderColor: 'rgba(0, 28, 67, 0.2)' }}>
           <CardContent className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-blue-primary" />
@@ -120,7 +139,23 @@ export function AdminBookings() {
   // Error state
   if (error) {
     return (
-      <div className="p-6 space-y-6" style={{ backgroundColor: 'rgba(0, 28, 67, 0.05)' }}>
+      <div className="relative min-h-screen p-6 space-y-6">
+        {/* Background Image */}
+        <div 
+          className="fixed inset-0 bg-cover bg-center"
+          style={{ 
+            backgroundImage: `url(${backgroundImage})`,
+            zIndex: -2
+          }}
+        />
+        {/* Overlay */}
+        <div 
+          className="fixed inset-0"
+          style={{ 
+            backgroundColor: 'rgba(0, 28, 67, 0.5)',
+            zIndex: -1
+          }}
+        />
         <Card className="bg-red-50 border-red-200">
           <CardContent className="flex items-center py-4">
             <AlertCircle className="h-5 w-5 text-red-600 mr-3" />
@@ -135,12 +170,31 @@ export function AdminBookings() {
   }
 
   return (
-    <div className="p-6 space-y-6" style={{ backgroundColor: 'rgba(0, 28, 67, 0.05)' }}>
-      {/* Header */}
-      <div>
-        <h1 style={{ color: '#000000', fontSize: '2rem', marginBottom: '0.5rem' }}>Bookings Management</h1>
-        <p style={{ color: '#627182' }}>View and manage all hotel bookings</p>
-      </div>
+    <div className="relative min-h-screen">
+      {/* Background Image */}
+      <div 
+        className="fixed inset-0 bg-cover bg-center"
+        style={{ 
+          backgroundImage: `url(${backgroundImage})`,
+          zIndex: -2
+        }}
+      />
+      {/* Overlay */}
+      <div 
+        className="fixed inset-0"
+        style={{ 
+          backgroundColor: 'rgba(0, 28, 67, 0.5)',
+          zIndex: -1
+        }}
+      />
+      
+      {/* Content with padding */}
+      <div className="p-6 space-y-6">
+        {/* Header */}
+        <div>
+          <h1 style={{ color: '#FFFFFF', fontSize: '2rem', marginBottom: '0.5rem' }}>Bookings Management</h1>
+          <p style={{ color: '#FFFFFF' }}>View and manage all hotel bookings</p>
+        </div>
 
       {/* Filters */}
       <Card style={{ backgroundColor: '#D9D9D9', borderColor: 'rgba(0, 28, 67, 0.2)' }}>
@@ -317,6 +371,7 @@ export function AdminBookings() {
           )}
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }

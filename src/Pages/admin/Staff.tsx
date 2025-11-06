@@ -113,7 +113,7 @@ export function AdminStaff() {
   const activeStaff = staff.filter(s => s.status === 'active').length;
 
   return (
-    <div className="relative p-4 sm:p-6 space-y-4 sm:space-y-6">
+    <div className="relative p-4 sm:p-6 space-y-4 sm:space-y-6 min-h-screen">
       {/* Background Image */}
       <div 
         className="fixed inset-0 bg-cover bg-center"

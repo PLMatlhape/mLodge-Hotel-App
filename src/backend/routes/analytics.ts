@@ -120,13 +120,9 @@ router.get('/booking-trends', authenticateToken, requireAdmin, async (req: AuthR
   try {
     const { period = 'month' } = req.query;
     let dateFormat = 'YYYY-MM-DD';
-    let dateInterval = '1 month';
 
-    if (period === 'week') {
-      dateInterval = '1 week';
-    } else if (period === 'year') {
+    if (period === 'year') {
       dateFormat = 'YYYY-MM';
-      dateInterval = '1 year';
     }
 
     const result = await db.query(
@@ -135,10 +131,10 @@ router.get('/booking-trends', authenticateToken, requireAdmin, async (req: AuthR
         COUNT(*) as count,
         COALESCE(SUM(total_price), 0) as revenue
        FROM bookings
-       WHERE created_at >= NOW() - INTERVAL $2
+       WHERE created_at >= NOW() - INTERVAL '1 ${period}'
        GROUP BY TO_CHAR(created_at, $1)
        ORDER BY date`,
-      [dateFormat, dateInterval]
+      [dateFormat]
     );
 
     res.json(result.rows || []);
@@ -154,13 +150,9 @@ router.get('/revenue-trends', authenticateToken, requireAdmin, async (req: AuthR
   try {
     const { period = 'month' } = req.query;
     let dateFormat = 'YYYY-MM-DD';
-    let dateInterval = '1 month';
 
-    if (period === 'week') {
-      dateInterval = '1 week';
-    } else if (period === 'year') {
+    if (period === 'year') {
       dateFormat = 'YYYY-MM';
-      dateInterval = '1 year';
     }
 
     const result = await db.query(
@@ -169,10 +161,10 @@ router.get('/revenue-trends', authenticateToken, requireAdmin, async (req: AuthR
         COALESCE(SUM(total_price), 0) as revenue
        FROM bookings
        WHERE status IN ('confirmed', 'completed')
-         AND created_at >= NOW() - INTERVAL $2
+         AND created_at >= NOW() - INTERVAL '1 ${period}'
        GROUP BY TO_CHAR(created_at, $1)
        ORDER BY date`,
-      [dateFormat, dateInterval]
+      [dateFormat]
     );
 
     res.json(result.rows || []);
@@ -264,6 +256,227 @@ router.get('/booking-status', authenticateToken, requireAdmin, async (_req: Auth
     console.error('Error fetching booking status:', error);
     // Return empty array for empty database
     res.json([]);
+  }
+});
+
+// Get performance statistics with period comparison
+router.get('/performance-stats', authenticateToken, requireAdmin, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { period = 'year' } = req.query; // 'week', 'month', 'quarter', 'year'
+    
+    // Calculate date ranges
+    let currentPeriodStart: Date;
+    let previousPeriodStart: Date;
+    let previousPeriodEnd: Date;
+    const now = new Date();
+
+    switch (period) {
+      case 'week':
+        currentPeriodStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        previousPeriodStart = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+        previousPeriodEnd = currentPeriodStart;
+        break;
+      case 'month':
+        currentPeriodStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        previousPeriodStart = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+        previousPeriodEnd = currentPeriodStart;
+        break;
+      case 'quarter':
+        currentPeriodStart = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        previousPeriodStart = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+        previousPeriodEnd = currentPeriodStart;
+        break;
+      case 'year':
+      default:
+        currentPeriodStart = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        previousPeriodStart = new Date(now.getTime() - 730 * 24 * 60 * 60 * 1000);
+        previousPeriodEnd = currentPeriodStart;
+    }
+
+    // Get current period statistics
+    const currentStats = await db.query(
+      `SELECT 
+        COUNT(*) as total_bookings,
+        COALESCE(SUM(total_price), 0) as total_revenue,
+        COALESCE(AVG(EXTRACT(DAY FROM (check_out_date - check_in_date))), 0) as avg_stay_duration
+       FROM bookings
+       WHERE created_at >= $1 AND created_at <= $2
+         AND status IN ('confirmed', 'completed')`,
+      [currentPeriodStart, now]
+    );
+
+    // Get previous period statistics
+    const previousStats = await db.query(
+      `SELECT 
+        COUNT(*) as total_bookings,
+        COALESCE(SUM(total_price), 0) as total_revenue,
+        COALESCE(AVG(EXTRACT(DAY FROM (check_out_date - check_in_date))), 0) as avg_stay_duration
+       FROM bookings
+       WHERE created_at >= $1 AND created_at < $2
+         AND status IN ('confirmed', 'completed')`,
+      [previousPeriodStart, previousPeriodEnd]
+    );
+
+    // Calculate occupancy for current period
+    const occupancyResult = await db.query(
+      `SELECT 
+        COUNT(DISTINCT DATE(d.date)) as booked_days,
+        (SELECT SUM(quantity) FROM rooms WHERE is_active = true) as total_rooms
+       FROM bookings b
+       CROSS JOIN LATERAL generate_series(
+         GREATEST(b.check_in_date, $1::date),
+         LEAST(b.check_out_date - INTERVAL '1 day', $2::date),
+         '1 day'::interval
+       ) AS d(date)
+       WHERE b.status IN ('confirmed', 'completed')
+         AND b.check_in_date <= $2
+         AND b.check_out_date >= $1`,
+      [currentPeriodStart, now]
+    );
+
+    // Calculate occupancy for previous period
+    const previousOccupancyResult = await db.query(
+      `SELECT 
+        COUNT(DISTINCT DATE(d.date)) as booked_days,
+        (SELECT SUM(quantity) FROM rooms WHERE is_active = true) as total_rooms
+       FROM bookings b
+       CROSS JOIN LATERAL generate_series(
+         GREATEST(b.check_in_date, $1::date),
+         LEAST(b.check_out_date - INTERVAL '1 day', $2::date),
+         '1 day'::interval
+       ) AS d(date)
+       WHERE b.status IN ('confirmed', 'completed')
+         AND b.check_in_date <= $2
+         AND b.check_out_date >= $1`,
+      [previousPeriodStart, previousPeriodEnd]
+    );
+
+    const current = currentStats.rows[0] || { total_bookings: 0, total_revenue: 0, avg_stay_duration: 0 };
+    const previous = previousStats.rows[0] || { total_bookings: 0, total_revenue: 0, avg_stay_duration: 0 };
+    
+    const currentOccupancy = occupancyResult.rows[0] || { booked_days: 0, total_rooms: 1 };
+    const previousOccupancy = previousOccupancyResult.rows[0] || { booked_days: 0, total_rooms: 1 };
+    
+    // Calculate period length in days
+    const periodDays = Math.ceil((now.getTime() - currentPeriodStart.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Calculate occupancy percentages
+    const totalRooms = parseInt(currentOccupancy.total_rooms) || 1;
+    const totalPossibleRoomDays = totalRooms * periodDays;
+    const currentOccupancyRate = totalPossibleRoomDays > 0 
+      ? (parseInt(currentOccupancy.booked_days) / totalPossibleRoomDays) * 100 
+      : 0;
+    
+    const previousOccupancyRate = totalPossibleRoomDays > 0 
+      ? (parseInt(previousOccupancy.booked_days) / totalPossibleRoomDays) * 100 
+      : 0;
+
+    // Calculate percentage changes
+    const bookingsChange = previous.total_bookings > 0
+      ? ((parseInt(current.total_bookings) - parseInt(previous.total_bookings)) / parseInt(previous.total_bookings)) * 100
+      : parseInt(current.total_bookings) > 0 ? 100 : 0;
+
+    const revenueChange = parseFloat(previous.total_revenue) > 0
+      ? ((parseFloat(current.total_revenue) - parseFloat(previous.total_revenue)) / parseFloat(previous.total_revenue)) * 100
+      : parseFloat(current.total_revenue) > 0 ? 100 : 0;
+
+    const occupancyChange = previousOccupancyRate > 0
+      ? currentOccupancyRate - previousOccupancyRate
+      : currentOccupancyRate;
+
+    const stayDurationChange = parseFloat(previous.avg_stay_duration) > 0
+      ? parseFloat(current.avg_stay_duration) - parseFloat(previous.avg_stay_duration)
+      : parseFloat(current.avg_stay_duration);
+
+    res.json({
+      totalBookings: {
+        value: parseInt(current.total_bookings),
+        change: parseFloat(bookingsChange.toFixed(1)),
+        changeType: bookingsChange >= 0 ? 'increase' : 'decrease'
+      },
+      revenue: {
+        value: parseFloat(current.total_revenue),
+        change: parseFloat(revenueChange.toFixed(1)),
+        changeType: revenueChange >= 0 ? 'increase' : 'decrease'
+      },
+      avgOccupancy: {
+        value: parseFloat(currentOccupancyRate.toFixed(1)),
+        change: parseFloat(occupancyChange.toFixed(1)),
+        changeType: occupancyChange >= 0 ? 'increase' : 'decrease'
+      },
+      avgStayDuration: {
+        value: parseFloat(parseFloat(current.avg_stay_duration).toFixed(1)),
+        change: parseFloat(stayDurationChange.toFixed(1)),
+        changeType: stayDurationChange >= 0 ? 'increase' : 'decrease'
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching performance stats:', error);
+    res.json({
+      totalBookings: { value: 0, change: 0, changeType: 'increase' },
+      revenue: { value: 0, change: 0, changeType: 'increase' },
+      avgOccupancy: { value: 0, change: 0, changeType: 'increase' },
+      avgStayDuration: { value: 0, change: 0, changeType: 'increase' }
+    });
+  }
+});
+
+// Get room type distribution (for pie chart)
+router.get('/room-type-distribution', authenticateToken, requireAdmin, async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const result = await db.query(
+      `SELECT 
+        r.room_type as name,
+        COUNT(b.id) as value,
+        '#0F51AF' as color
+       FROM rooms r
+       LEFT JOIN booking_items bi ON bi.room_id = r.id
+       LEFT JOIN bookings b ON b.id = bi.booking_id AND b.status IN ('confirmed', 'completed')
+       WHERE r.is_active = true
+       GROUP BY r.room_type
+       ORDER BY value DESC`
+    );
+
+    // Assign different colors to each room type
+    const colors = ['#0F51AF', '#627182', '#001C43', '#D9D9D9', '#4A90E2'];
+    const data = result.rows.map((row, index) => ({
+      ...row,
+      value: parseInt(row.value),
+      color: colors[index % colors.length]
+    }));
+
+    res.json(data);
+  } catch (error) {
+    console.error('Error fetching room type distribution:', error);
+    res.json([]);
+  }
+});
+
+// Get booking sources (for bar chart)
+router.get('/booking-sources', authenticateToken, requireAdmin, async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const result = await db.query(
+      `SELECT 
+        COALESCE(source, 'Website') as source,
+        COUNT(*) as bookings
+       FROM bookings
+       WHERE status IN ('confirmed', 'completed')
+       GROUP BY source
+       ORDER BY bookings DESC`
+    );
+
+    res.json(result.rows.map(row => ({
+      source: row.source,
+      bookings: parseInt(row.bookings)
+    })));
+  } catch (error) {
+    console.error('Error fetching booking sources:', error);
+    res.json([
+      { source: 'Website', bookings: 0 },
+      { source: 'Mobile App', bookings: 0 },
+      { source: 'Phone', bookings: 0 },
+      { source: 'Walk-in', bookings: 0 }
+    ]);
   }
 });
 

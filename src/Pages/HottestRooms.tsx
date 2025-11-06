@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { fetchAccommodations } from '../store/slices/roomsSlice';
+import { fetchRooms } from '../store/slices/roomsSlice';
 // Amenities Icons
 import wifiIcon from '../assets/icons/white/white-wifi-icon.png';
 import carIcon from '../assets/icons/white/white-car-icon.png';
@@ -44,26 +44,29 @@ const HottestRooms: React.FC<HottestRoomsProps> = ({ onRoomClick }) => {
 
   // Fetch rooms from database on component mount
   useEffect(() => {
-    dispatch(fetchAccommodations({ limit: 10 }));
+    dispatch(fetchRooms());
   }, [dispatch]);
 
   // Transform Redux rooms to match the Room interface
   const rooms: Room[] = reduxRooms.map((room) => {
     const roomData = room as unknown as Record<string, unknown>;
+    const photos = (roomData.photos as Array<{ url: string; is_primary: boolean }>) || [];
+    const firstPhoto = photos[0]?.url || '';
+    
     return {
       id: roomData.id as number,
       name: roomData.name as string,
       description: (roomData.description as string) || 'Luxurious suite with panoramic views',
       beds: (roomData.beds as number) || 2,
       baths: (roomData.baths as number) || 1,
-      area: (roomData.size as number) || (roomData.area as number) || 85,
-      price: (roomData.price_per_night as number) || (roomData.price as number) || 0,
-      image: (roomData.image as string) || ((roomData.images as string[])?.[0]) || '',
-      images: (roomData.images as string[]) || ((roomData.image as string) ? [roomData.image as string] : []),
-      badge: (roomData.type as string) || (roomData.badge as string) || 'Premium',
-      location: (roomData.location as string) || (roomData.city as string) || 'Cape Town',
-      rating: (roomData.rating as number) || 4.5,
-      guests: (roomData.guests as string) || `upto ${(roomData.capacity as number) || 2} guests`,
+      area: (roomData.area as number) || 85,
+      price: (roomData.price_per_night as number) || 0,
+      image: firstPhoto,
+      images: photos.map(p => p.url),
+      badge: (roomData.type as string) || 'Premium',
+      location: (roomData.location as string) || 'Cape Town',
+      rating: 5,
+      guests: `upto ${(roomData.capacity as number) || 2} guests`,
       favorite: false
     };
   });
