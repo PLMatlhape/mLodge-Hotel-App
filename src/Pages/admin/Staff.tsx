@@ -34,7 +34,6 @@ export function AdminStaff() {
     email: '',
     phone: '',
     role: 'Receptionist' as StaffMember['role'],
-    department: '',
     hire_date: new Date().toISOString().split('T')[0],
     salary: 0,
     emergency_contact: '',
@@ -49,7 +48,6 @@ export function AdminStaff() {
         email: staffMember.email,
         phone: staffMember.phone,
         role: staffMember.role,
-        department: staffMember.department || '',
         hire_date: staffMember.hire_date,
         salary: staffMember.salary || 0,
         emergency_contact: staffMember.emergency_contact || '',
@@ -62,7 +60,6 @@ export function AdminStaff() {
         email: '',
         phone: '',
         role: 'Receptionist',
-        department: '',
         hire_date: new Date().toISOString().split('T')[0],
         salary: 0,
         emergency_contact: '',
@@ -211,7 +208,6 @@ export function AdminStaff() {
                       <th className="text-left py-3 px-4 text-xs sm:text-sm text-gray-text font-medium">Name</th>
                       <th className="text-left py-3 px-4 text-xs sm:text-sm text-gray-text font-medium">Email</th>
                       <th className="text-left py-3 px-4 text-xs sm:text-sm text-gray-text font-medium">Role</th>
-                      <th className="text-left py-3 px-4 text-xs sm:text-sm text-gray-text font-medium">Department</th>
                       <th className="text-left py-3 px-4 text-xs sm:text-sm text-gray-text font-medium">Status</th>
                       <th className="text-left py-3 px-4 text-xs sm:text-sm text-gray-text font-medium">Actions</th>
                     </tr>
@@ -226,7 +222,6 @@ export function AdminStaff() {
                             {member.role}
                           </Badge>
                         </td>
-                        <td className="py-3 px-4 text-sm text-gray-text">{member.department || 'N/A'}</td>
                         <td className="py-3 px-4">
                           <Badge
                             className={member.status === 'active' ? 'bg-green-600 text-white' : member.status === 'on_leave' ? 'bg-yellow-600 text-white' : 'bg-gray-600 text-white'}
@@ -313,14 +308,7 @@ export function AdminStaff() {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label className="text-black">Department</Label>
-              <Input
-                value={formData.department}
-                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                className="bg-white border-gray-300 text-black"
-              />
-            </div>
+
             <div>
               <Label className="text-black">Hire Date *</Label>
               <Input
