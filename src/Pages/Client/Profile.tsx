@@ -1,8 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '../../store/hooks';
 import { updateUser } from '../../store/slices/authSlice';
+import { fetchMyBookings } from '../../store/slices/bookingsSlice';
 import { usersAPI } from '../../services/api';
+import { Badge } from '../../components/ui/badge';
 import logo from '../../assets/image/Erxtras/Logo-mLodge-hotel.png';
 import backgroundImage from '../../assets/image/background/Client-Page.jpeg';
 
@@ -10,6 +13,7 @@ const Profile: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const { bookings, loading: bookingsLoading } = useAppSelector((state) => state.bookings);
   
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -32,7 +36,7 @@ const Profile: React.FC = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  // Fetch user profile on component mount
+  // Fetch user profile and bookings on component mount
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -40,7 +44,7 @@ const Profile: React.FC = () => {
         setError(null);
         const response = await usersAPI.getProfile();
         const userData = response.data;
-        
+
         setProfileData({
           fullName: userData.name || '',
           email: userData.email || '',
@@ -67,8 +71,9 @@ const Profile: React.FC = () => {
 
     if (isAuthenticated) {
       fetchProfile();
+      dispatch(fetchMyBookings());
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, dispatch]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -393,15 +398,68 @@ const Profile: React.FC = () => {
                   {/* Recent Bookings Section */}
                   <div className="mt-12">
                     <h3 className="text-gray-900 text-2xl font-bold mb-6">Recent Bookings</h3>
-                    <div className="bg-gray-50 rounded-lg p-6 text-center">
-                      <p className="text-gray-600">No recent bookings</p>
-                      <Link 
-                        to="/dashboard" 
-                        className="inline-block mt-4 bg-[#0F51AF] text-white px-6 py-2 rounded-lg hover:bg-[#0d4291] transition-colors font-medium"
-                      >
-                        Browse Rooms
-                      </Link>
-                    </div>
+                    {bookingsLoading ? (
+                      <div className="bg-gray-50 rounded-lg p-6 text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0F51AF] mx-auto"></div>
+                        <p className="text-gray-600 mt-2">Loading bookings...</p>
+                      </div>
+                    ) : bookings.length === 0 ? (
+                      <div className="bg-gray-50 rounded-lg p-6 text-center">
+                        <p className="text-gray-600">No recent bookings</p>
+                        <Link
+                          to="/dashboard"
+                          className="inline-block mt-4 bg-[#0F51AF] text-white px-6 py-2 rounded-lg hover:bg-[#0d4291] transition-colors font-medium"
+                        >
+                          Browse Rooms
+                        </Link>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {bookings.slice(0, 3).map((booking) => (
+                          <div key={booking.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                            <div className="flex justify-between items-start mb-3">
+                              <div>
+                                <h4 className="font-semibold text-gray-900">{booking.accommodation_name || 'Accommodation'}</h4>
+                                <p className="text-sm text-gray-600">Booking ID: {booking.id}</p>
+                              </div>
+                              <Badge className={`${
+                                booking.status === 'confirmed' ? 'bg-green-500' :
+                                booking.status === 'pending' ? 'bg-yellow-500' :
+                                booking.status === 'cancelled' ? 'bg-red-500' : 'bg-gray-500'
+                              } text-white`}>
+                                {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                              </Badge>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <p className="text-gray-500">Check-in</p>
+                                <p className="font-medium">{new Date(booking.check_in_date).toLocaleDateString('en-ZA')}</p>
+                              </div>
+                              <div>
+                                <p className="text-gray-500">Check-out</p>
+                                <p className="font-medium">{new Date(booking.check_out_date).toLocaleDateString('en-ZA')}</p>
+                              </div>
+                            </div>
+                            <div className="mt-3 flex justify-between items-center">
+                              <p className="text-sm text-gray-600">
+                                {booking.num_adults} adults{booking.num_children > 0 ? `, ${booking.num_children} children` : ''}
+                              </p>
+                              <p className="font-bold text-[#0F51AF]">R {(booking.total_price || 0).toLocaleString()}</p>
+                            </div>
+                          </div>
+                        ))}
+                        {bookings.length > 3 && (
+                          <div className="text-center pt-4">
+                            <Link
+                              to="/booking-history"
+                              className="text-[#0F51AF] hover:text-[#0045b0] font-medium"
+                            >
+                              View all bookings →
+                            </Link>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

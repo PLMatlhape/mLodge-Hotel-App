@@ -121,7 +121,7 @@ const BookingHistory: React.FC = () => {
                 <CardHeader className="bg-gradient-to-r from-[#001F3F] to-[#0F51AF] text-white">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
-                      <CardTitle className="text-xl mb-1">{booking.roomName}</CardTitle>
+                      <CardTitle className="text-xl mb-1">{booking.accommodation_name}</CardTitle>
                       <p className="text-blue-200 text-sm">Booking ID: {booking.id}</p>
                     </div>
                     <Badge className={getStatusColor(booking.status)}>
@@ -138,7 +138,7 @@ const BookingHistory: React.FC = () => {
                         <div>
                           <p className="text-sm text-gray-500">Check-in</p>
                           <p className="font-medium text-gray-900">
-                            {formatDate(booking.checkInDate)}
+                            {formatDate(booking.check_in_date)}
                           </p>
                         </div>
                       </div>
@@ -147,62 +147,48 @@ const BookingHistory: React.FC = () => {
                         <div>
                           <p className="text-sm text-gray-500">Check-out</p>
                           <p className="font-medium text-gray-900">
-                            {formatDate(booking.checkOutDate)}
+                            {formatDate(booking.check_out_date)}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-start gap-3">
                         <Clock className="w-5 h-5 text-gray-400 mt-0.5" />
                         <div>
-                          <p className="text-sm text-gray-500">Duration</p>
+                          <p className="text-sm text-gray-500">Guests</p>
                           <p className="font-medium text-gray-900">
-                            {booking.nights} {booking.nights === 1 ? 'night' : 'nights'}
+                            {booking.num_adults} adults{booking.num_children > 0 ? `, ${booking.num_children} children` : ''}
                           </p>
                         </div>
                       </div>
-                      {booking.guestInfo && (
-                        <div className="flex items-start gap-3">
-                          <Users className="w-5 h-5 text-gray-400 mt-0.5" />
-                          <div>
-                            <p className="text-sm text-gray-500">Guest</p>
-                            <p className="font-medium text-gray-900">
-                              {booking.guestInfo.firstName} {booking.guestInfo.lastName}
-                            </p>
-                            <p className="text-sm text-gray-500">{booking.guestInfo.email}</p>
-                          </div>
+                      <div className="flex items-start gap-3">
+                        <Users className="w-5 h-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">Guest</p>
+                          <p className="font-medium text-gray-900">
+                            {booking.guest_name}
+                          </p>
+                          <p className="text-sm text-gray-500">{booking.guest_email}</p>
                         </div>
-                      )}
+                      </div>
                     </div>
 
-                    {/* Right: Room Image and Price */}
+                    {/* Right: Rooms and Price */}
                     <div className="space-y-4">
-                      {booking.roomImage && (
-                        <img
-                          src={booking.roomImage}
-                          alt={booking.roomName}
-                          className="w-full h-40 object-cover rounded-lg"
-                        />
-                      )}
                       <div className="bg-blue-50 rounded-lg p-4">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm text-gray-600">Price per night</span>
-                          <span className="font-medium text-gray-900">
-                            R {booking.pricePerNight.toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm text-gray-600">
-                            {booking.nights} {booking.nights === 1 ? 'night' : 'nights'}
-                          </span>
-                          <span className="font-medium text-gray-900">
-                            R {(booking.pricePerNight * booking.nights).toLocaleString()}
-                          </span>
+                        <div className="mb-3">
+                          <p className="text-sm text-gray-600 mb-2">Rooms Booked:</p>
+                          {booking.rooms?.map((room, index) => (
+                            <div key={index} className="flex justify-between items-center text-sm">
+                              <span>{room.room_name} (x{room.quantity})</span>
+                              <span className="font-medium">R {room.price_per_night.toLocaleString()}</span>
+                            </div>
+                          ))}
                         </div>
                         <div className="border-t border-blue-200 pt-2 mt-2">
                           <div className="flex justify-between items-center">
-                            <span className="font-semibold text-gray-900">Total</span>
+                            <span className="font-semibold text-gray-900">Total Amount</span>
                             <span className="text-xl font-bold text-[#0F51AF]">
-                              R {booking.totalPrice.toLocaleString()}
+                              R {booking.total_amount.toLocaleString()}
                             </span>
                           </div>
                         </div>
@@ -216,11 +202,11 @@ const BookingHistory: React.FC = () => {
                       variant="outline"
                       onClick={() =>
                         navigate(
-                          `/room/${booking.roomId}?checkInDate=${booking.checkInDate}&checkOutDate=${booking.checkOutDate}`
+                          `/accommodation/${booking.accommodation_id}?checkInDate=${booking.check_in_date}&checkOutDate=${booking.check_out_date}`
                         )
                       }
                     >
-                      View Room Details
+                      View Accommodation
                     </Button>
                     {booking.status === 'confirmed' && (
                       <Button

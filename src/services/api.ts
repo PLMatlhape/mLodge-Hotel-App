@@ -112,7 +112,7 @@ export interface Booking {
   check_out_date: string;
   num_adults: number;
   num_children: number;
-  total_amount: number;
+  total_price: number;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'rejected';
   guest_name: string;
   guest_email: string;
