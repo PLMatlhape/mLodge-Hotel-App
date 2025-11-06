@@ -1,39 +1,89 @@
-import { useState } from 'react';
-import { Calendar as CalendarIcon, TrendingUp, Users, DollarSign } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Calendar as CalendarIcon, TrendingUp, Users, DollarSign, Loader2, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { LineChart, Line, BarChart, Bar, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import backgroundImage from '../../assets/image/background/Offers-section.jpeg';
-
-const monthlyData = [
-  { month: 'Jan', bookings: 85, revenue: 180000, occupancy: 75 },
-  { month: 'Feb', bookings: 92, revenue: 195000, occupancy: 78 },
-  { month: 'Mar', bookings: 105, revenue: 225000, occupancy: 82 },
-  { month: 'Apr', bookings: 98, revenue: 210000, occupancy: 80 },
-  { month: 'May', bookings: 115, revenue: 245000, occupancy: 85 },
-  { month: 'Jun', bookings: 125, revenue: 268000, occupancy: 88 },
-  { month: 'Jul', bookings: 135, revenue: 290000, occupancy: 92 },
-  { month: 'Aug', bookings: 130, revenue: 275000, occupancy: 90 },
-  { month: 'Sep', bookings: 118, revenue: 250000, occupancy: 84 },
-  { month: 'Oct', bookings: 110, revenue: 235000, occupancy: 82 },
-];
-
-const roomTypeData = [
-  { name: 'Premium', value: 35, color: '#0F51AF' },
-  { name: 'Deluxe', value: 45, color: '#00bfff' },
-  { name: 'Standard', value: 20, color: '#ffa500' },
-];
-
-const bookingSourceData = [
-  { source: 'Direct Website', bookings: 450 },
-  { source: 'Booking.com', bookings: 320 },
-  { source: 'Expedia', bookings: 180 },
-  { source: 'Airbnb', bookings: 150 },
-  { source: 'Walk-in', bookings: 100 },
-];
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { fetchDashboardStats, fetchBookingTrends, fetchRevenueTrends } from '../../store/slices/analyticsSlice';
 
 export function AdminAnalytics() {
-  const [timeRange, setTimeRange] = useState('year');
+  const dispatch = useAppDispatch();
+  const { dashboardStats, bookingTrends, revenueTrends, loading, error } = useAppSelector((state) => state.analytics);
+  
+  const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year'>('year');
+
+  useEffect(() => {
+    dispatch(fetchDashboardStats());
+    dispatch(fetchBookingTrends({ period: timeRange }));
+    dispatch(fetchRevenueTrends({ period: timeRange }));
+  }, [dispatch, timeRange]);
+
+  // Transform data for charts
+  const monthlyData = bookingTrends.map((trend) => ({
+    month: new Date(trend.date).toLocaleDateString('en-US', { month: 'short' }),
+    bookings: trend.bookings,
+    revenue: trend.revenue,
+  }));
+
+  // Loading state
+  if (loading && !dashboardStats) {
+    return (
+      <div className="relative p-6 space-y-6 min-h-screen">
+        <div 
+          className="fixed inset-0 bg-cover bg-center"
+          style={{ 
+            backgroundImage: `url(${backgroundImage})`,
+            zIndex: -2
+          }}
+        />
+        <div 
+          className="fixed inset-0"
+          style={{ 
+            backgroundColor: 'rgba(0, 28, 67, 0.5)',
+            zIndex: -1
+          }}
+        />
+        <Card style={{ backgroundColor: '#D9D9D9', borderColor: 'rgba(0, 28, 67, 0.2)' }}>
+          <CardContent className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-primary" />
+            <span className="ml-3 text-gray-text">Loading analytics...</span>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="relative p-6 space-y-6 min-h-screen">
+        <div 
+          className="fixed inset-0 bg-cover bg-center"
+          style={{ 
+            backgroundImage: `url(${backgroundImage})`,
+            zIndex: -2
+          }}
+        />
+        <div 
+          className="fixed inset-0"
+          style={{ 
+            backgroundColor: 'rgba(0, 28, 67, 0.5)',
+            zIndex: -1
+          }}
+        />
+        <Card className="bg-red-50 border-red-200">
+          <CardContent className="flex items-center py-4">
+            <AlertCircle className="h-5 w-5 text-red-600 mr-3" />
+            <div>
+              <p className="text-red-800 font-medium">Error loading analytics</p>
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="relative p-6 space-y-6">

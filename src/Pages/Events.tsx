@@ -73,7 +73,7 @@ const Events: React.FC = () => {
               {/* Event Image */}
               <div className="relative h-56 overflow-hidden">
                 <img 
-                  src={event.image} 
+                  src={event.image || '/placeholder-event.jpg'} 
                   alt={event.title}
                   className="w-full h-full object-cover"
                 />

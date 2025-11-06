@@ -14,39 +14,59 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      // Check if admin credentials
-      if (username === 'Admin@mlodgehotel.co.za' && password === 'Admin@mlodgehotel') {
-        const adminUser = {
-          id: 'admin-1',
+    try {
+      // Call backend API for authentication
+      const response = await fetch('http://localhost:5001/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           email: username,
-          firstName: 'Admin',
-          lastName: 'User',
-          phone: '0000000000',
-          role: 'admin' as const,
-        };
-        dispatch(loginSuccess(adminUser));
+          password: password,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        alert(error.error || 'Login failed. Please check your credentials.');
+        setIsLoading(false);
+        return;
+      }
+
+      const data = await response.json();
+      
+      // Store token in localStorage
+      localStorage.setItem('token', data.token);
+      
+      // Dispatch login success with user data
+      const user = {
+        id: data.user.id.toString(),
+        email: data.user.email,
+        firstName: data.user.name.split(' ')[0] || 'User',
+        lastName: data.user.name.split(' ')[1] || '',
+        phone: data.user.phone || '',
+        role: data.user.role as 'admin' | 'client',
+      };
+      
+      dispatch(loginSuccess(user));
+      
+      // Navigate based on role
+      if (data.user.role === 'admin') {
         navigate('/admin/overview');
       } else {
-        // Regular user login
-        const clientUser = {
-          id: Math.random().toString(36).substr(2, 9),
-          email: username,
-          firstName: 'Client',
-          lastName: 'User',
-          phone: '0123456789',
-          role: 'client' as const,
-        };
-        dispatch(loginSuccess(clientUser));
         navigate('/dashboard');
       }
+    } catch (error) {
+      console.error('Login error:', error);
+      alert('An error occurred during login. Please try again.');
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (

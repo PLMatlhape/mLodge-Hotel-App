@@ -83,7 +83,7 @@ const Offers: React.FC = () => {
               {/* Card Image */}
               <div className="relative h-56 overflow-hidden">
                 <img 
-                  src={offer.image} 
+                  src={offer.image || '/placeholder-offer.jpg'} 
                   alt={offer.title}
                   className="w-full h-full object-cover"
                 />

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Search, Edit2, MoreVertical } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Edit2, MoreVertical, Loader2, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
@@ -9,25 +9,53 @@ import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { toast } from '../../lib/toast';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { fetchAllBookings, updateBookingStatusAsync } from '../../store/slices/bookingsSlice';
 
-const mockBookings = [
-  { id: 'BK-2025-1234', guest: 'John Doe', email: 'john@example.com', room: 'Luxury Penthouse', roomType: 'Premium', checkIn: '2025-10-25', checkOut: '2025-10-28', nights: 3, amount: 24000, status: 'Confirmed', date: '2025-10-19' },
-  { id: 'BK-2025-1233', guest: 'Jane Smith', email: 'jane@example.com', room: 'Deluxe Ocean View', roomType: 'Deluxe', checkIn: '2025-10-24', checkOut: '2025-10-26', nights: 2, amount: 10000, status: 'Confirmed', date: '2025-10-18' },
-  { id: 'BK-2025-1232', guest: 'Mike Johnson', email: 'mike@example.com', room: 'Standard Suite', roomType: 'Standard', checkIn: '2025-10-25', checkOut: '2025-10-25', nights: 2, amount: 2400, status: 'Pending', date: '2025-10-19' },
-  { id: 'BK-2025-1231', guest: 'Sarah Williams', email: 'sarah@example.com', room: 'Presidential Suite', roomType: 'Premium', checkIn: '2025-10-22', checkOut: '2025-10-24', nights: 2, amount: 15900, status: 'Confirmed', date: '2025-10-17' },
-  { id: 'BK-2025-1230', guest: 'David Brown', email: 'david@example.com', room: 'Deluxe City View', roomType: 'Deluxe', checkIn: '2025-10-21', checkOut: '2025-10-23', nights: 2, amount: 8000, status: 'Checked-in', date: '2025-10-16' },
-  { id: 'BK-2025-1229', guest: 'Emily Davis', email: 'emily@example.com', room: 'Standard Room', roomType: 'Standard', checkIn: '2025-10-20', checkOut: '2025-10-22', nights: 2, amount: 1600, status: 'Completed', date: '2025-10-15' },
-  { id: 'BK-2025-1228', guest: 'Robert Wilson', email: 'robert@example.com', room: 'Family Suite', roomType: 'Deluxe', checkIn: '2025-10-19', checkOut: '2025-10-22', nights: 3, amount: 9600, status: 'Cancelled', date: '2025-10-14' },
-  { id: 'BK-2025-1227', guest: 'Lisa Anderson', email: 'lisa@example.com', room: 'Luxury Penthouse', roomType: 'Premium', checkIn: '2025-10-18', checkOut: '2025-10-20', nights: 2, amount: 16000, status: 'Completed', date: '2025-10-13' },
-];
+// Transform Redux booking to display format
+interface DisplayBooking {
+  id: string;
+  guest: string;
+  email: string;
+  room: string;
+  roomType: string;
+  checkIn: string;
+  checkOut: string;
+  nights: number;
+  amount: number;
+  status: string;
+  date: string;
+}
 
 export function AdminBookings() {
-  const [bookings, setBookings] = useState(mockBookings);
+  const dispatch = useAppDispatch();
+  const { bookings: reduxBookings, loading, error } = useAppSelector((state) => state.bookings);
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterRoomType, setFilterRoomType] = useState('all');
-  const [selectedBooking, setSelectedBooking] = useState<typeof mockBookings[0] | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<DisplayBooking | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+  // Fetch bookings on mount
+  useEffect(() => {
+    dispatch(fetchAllBookings());
+  }, [dispatch]);
+
+  // Transform Redux bookings to display format
+  const bookings: DisplayBooking[] = reduxBookings.map((booking) => ({
+    id: booking.id,
+    guest: `${booking.guestInfo.firstName} ${booking.guestInfo.lastName}`,
+    email: booking.guestInfo.email,
+    room: booking.roomName,
+    roomType: 'Standard', // Default since Redux doesn't have this field
+    checkIn: booking.checkInDate,
+    checkOut: booking.checkOutDate,
+    nights: booking.nights,
+    amount: booking.totalPrice,
+    status: booking.status.charAt(0).toUpperCase() + booking.status.slice(1), // Capitalize
+    date: booking.createdAt,
+  }));
 
   const filteredBookings = bookings.filter(booking => {
     const matchesSearch = 
@@ -41,16 +69,27 @@ export function AdminBookings() {
     return matchesSearch && matchesStatus && matchesRoomType;
   });
 
-  const handleEditBooking = (booking: typeof mockBookings[0]) => {
+  const handleEditBooking = (booking: DisplayBooking) => {
     setSelectedBooking(booking);
     setIsEditDialogOpen(true);
   };
 
-  const handleUpdateStatus = (bookingId: string, newStatus: string) => {
-    setBookings(bookings.map(b => 
-      b.id === bookingId ? { ...b, status: newStatus } : b
-    ));
-    toast.success('Booking status updated');
+  const handleUpdateStatus = async (bookingId: string, newStatus: string) => {
+    try {
+      // Parse the ID - Redux uses string IDs directly
+      await dispatch(
+        updateBookingStatusAsync({
+          id: parseInt(bookingId),
+          status: newStatus.toLowerCase() as 'pending' | 'confirmed' | 'cancelled',
+        })
+      ).unwrap();
+      toast.success('Booking status updated successfully');
+      // Refresh bookings list
+      dispatch(fetchAllBookings());
+    } catch (error) {
+      toast.error('Failed to update booking status');
+      console.error('Error updating booking status:', error);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -63,6 +102,37 @@ export function AdminBookings() {
       default: return { bg: '#666', text: '#FFFFFF' };
     }
   };
+
+  // Loading state
+  if (loading && bookings.length === 0) {
+    return (
+      <div className="p-6 space-y-6" style={{ backgroundColor: 'rgba(0, 28, 67, 0.05)' }}>
+        <Card style={{ backgroundColor: '#D9D9D9', borderColor: 'rgba(0, 28, 67, 0.2)' }}>
+          <CardContent className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-primary" />
+            <span className="ml-3 text-gray-text">Loading bookings...</span>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="p-6 space-y-6" style={{ backgroundColor: 'rgba(0, 28, 67, 0.05)' }}>
+        <Card className="bg-red-50 border-red-200">
+          <CardContent className="flex items-center py-4">
+            <AlertCircle className="h-5 w-5 text-red-600 mr-3" />
+            <div>
+              <p className="text-red-800 font-medium">Error loading bookings</p>
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6" style={{ backgroundColor: 'rgba(0, 28, 67, 0.05)' }}>

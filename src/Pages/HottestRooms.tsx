@@ -1,9 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-// Hottest Rooms Images
-import deluxeOcean from '../assets/image/hottest-rooms/Deluxe Ocean View.jpeg';
-import executiveBusiness from '../assets/image/hottest-rooms/Executive-business-room.jpeg';
-import standardComfort from '../assets/image/hottest-rooms/Standard Comfort Room.jpeg';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { fetchAccommodations } from '../store/slices/roomsSlice';
 // Amenities Icons
 import wifiIcon from '../assets/icons/white/white-wifi-icon.png';
 import carIcon from '../assets/icons/white/white-car-icon.png';
@@ -41,56 +39,34 @@ interface HottestRoomsProps {
 }
 
 const HottestRooms: React.FC<HottestRoomsProps> = ({ onRoomClick }) => {
-  const rooms: Room[] = [
-    {
-      id: 1,
-      name: "Presidential Suite",
-      description: "Luxurious suite with panoramic city views, private terrace, and jacuzzi",
-      beds: 2,
-      baths: 2,
-      area: 85,
-      price: 3500,
-      image: deluxeOcean,
-      images: [deluxeOcean, executiveBusiness, standardComfort],
-      badge: "premium",
-      location: "Cape Town",
-      rating: 4.8,
-      guests: "upto 4 guests",
+  const dispatch = useAppDispatch();
+  const { rooms: reduxRooms } = useAppSelector((state) => state.rooms);
+
+  // Fetch rooms from database on component mount
+  useEffect(() => {
+    dispatch(fetchAccommodations({ limit: 10 }));
+  }, [dispatch]);
+
+  // Transform Redux rooms to match the Room interface
+  const rooms: Room[] = reduxRooms.map((room) => {
+    const roomData = room as unknown as Record<string, unknown>;
+    return {
+      id: roomData.id as number,
+      name: roomData.name as string,
+      description: (roomData.description as string) || 'Luxurious suite with panoramic views',
+      beds: (roomData.beds as number) || 2,
+      baths: (roomData.baths as number) || 1,
+      area: (roomData.size as number) || (roomData.area as number) || 85,
+      price: (roomData.price_per_night as number) || (roomData.price as number) || 0,
+      image: (roomData.image as string) || ((roomData.images as string[])?.[0]) || '',
+      images: (roomData.images as string[]) || ((roomData.image as string) ? [roomData.image as string] : []),
+      badge: (roomData.type as string) || (roomData.badge as string) || 'Premium',
+      location: (roomData.location as string) || (roomData.city as string) || 'Cape Town',
+      rating: (roomData.rating as number) || 4.5,
+      guests: (roomData.guests as string) || `upto ${(roomData.capacity as number) || 2} guests`,
       favorite: false
-    },
-    {
-      id: 2,
-      name: "Executive Business Suite",
-      description: "Luxurious suite with panoramic city views, private terrace, and jacuzzi",
-      beds: 4,
-      baths: 2,
-      area: 45,
-      price: 2200,
-      image: executiveBusiness,
-      images: [executiveBusiness, standardComfort, deluxeOcean],
-      badge: "Business",
-      location: "Johannesburg",
-      rating: 4.6,
-      guests: "upto 6 guests",
-      favorite: false
-    },
-    {
-      id: 3,
-      name: "Deluxe Ocean View",
-      description: "Luxurious suite with panoramic city views, private terrace, and jacuzzi",
-      beds: 2,
-      baths: 2,
-      area: 95,
-      price: 2800,
-      image: standardComfort,
-      images: [standardComfort, deluxeOcean, executiveBusiness],
-      badge: "Business",
-      location: "Durban",
-      rating: 4.9,
-      guests: "upto 2 guests",
-      favorite: false
-    }
-  ];
+    };
+  });
 
   const amenities: Amenity[] = [
     {
@@ -156,7 +132,7 @@ const HottestRooms: React.FC<HottestRoomsProps> = ({ onRoomClick }) => {
                 {/* Room Image */}
                 <div className="relative h-64 overflow-hidden">
                   <img 
-                    src={room.image} 
+                    src={room.image || '/placeholder-room.jpg'} 
                     alt={room.name}
                     className="w-full h-full object-cover"
                   />
@@ -254,7 +230,7 @@ const HottestRooms: React.FC<HottestRoomsProps> = ({ onRoomClick }) => {
                 {/* Icon */}
                 <div className="mb-6">
                   <img 
-                    src={amenity.icon} 
+                    src={amenity.icon || '/placeholder-icon.png'} 
                     alt={amenity.title}
                     className="w-16 h-16 object-contain"
                   />

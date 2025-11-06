@@ -8,7 +8,12 @@ const router = express.Router();
 // Get user's bookings
 router.get('/my-bookings', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const userId = req.user.id;
+    const userId = req.user!.id;
+    
+    // Pagination parameters
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const offset = (page - 1) * limit;
 
     const result = await db.query(
       `SELECT b.*,
@@ -29,11 +34,27 @@ router.get('/my-bookings', authenticateToken, async (req: AuthRequest, res: Resp
        LEFT JOIN rooms r ON r.id = bi.room_id
        WHERE b.user_id = $1
        GROUP BY b.id, a.name, a.city, a.address
-       ORDER BY b.created_at DESC`,
+       ORDER BY b.created_at DESC
+       LIMIT $2 OFFSET $3`,
+      [userId, limit, offset]
+    );
+    
+    // Get total count
+    const countResult = await db.query(
+      'SELECT COUNT(*) as total FROM bookings WHERE user_id = $1',
       [userId]
     );
+    const total = parseInt(countResult.rows[0].total);
 
-    res.json(result.rows);
+    res.json({
+      bookings: result.rows,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
   } catch (error) {
     console.error('Error fetching bookings:', error);
     res.status(500).json({ error: 'Failed to fetch bookings' });
@@ -44,8 +65,8 @@ router.get('/my-bookings', authenticateToken, async (req: AuthRequest, res: Resp
 router.get('/:id', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
-    const isAdmin = req.user.role === 'admin';
+    const userId = req.user!.id;
+    const isAdmin = req.user!.role === 'admin';
 
     const result = await db.query(
       `SELECT b.*,
@@ -123,7 +144,7 @@ router.post('/', [
       special_requests
     } = req.body;
 
-    const userId = req.user.id;
+    const userId = req.user!.id;
 
     // Validate dates
     const checkIn = new Date(check_in_date);
@@ -266,8 +287,8 @@ router.patch('/:id/status', [
 
     const { id } = req.params;
     const { status } = req.body;
-    const userId = req.user.id;
-    const isAdmin = req.user.role === 'admin';
+    const userId = req.user!.id;
+    const isAdmin = req.user!.role === 'admin';
 
     // Check if user owns booking or is admin
     const booking = await db.query(
@@ -304,6 +325,11 @@ router.patch('/:id/status', [
 // Get all bookings (Admin only)
 router.get('/', authenticateToken, requireAdmin, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    // Pagination parameters
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const offset = (page - 1) * limit;
+    
     const result = await db.query(
       `SELECT b.*,
               a.name as accommodation_name,
@@ -313,10 +339,24 @@ router.get('/', authenticateToken, requireAdmin, async (req: AuthRequest, res: R
        FROM bookings b
        JOIN accommodations a ON a.id = b.accommodation_id
        JOIN users u ON u.id = b.user_id
-       ORDER BY b.created_at DESC`
+       ORDER BY b.created_at DESC
+       LIMIT $1 OFFSET $2`,
+      [limit, offset]
     );
+    
+    // Get total count
+    const countResult = await db.query('SELECT COUNT(*) as total FROM bookings');
+    const total = parseInt(countResult.rows[0].total);
 
-    res.json(result.rows);
+    res.json({
+      bookings: result.rows,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
   } catch (error) {
     console.error('Error fetching all bookings:', error);
     res.status(500).json({ error: 'Failed to fetch bookings' });

@@ -9,7 +9,7 @@ const router = express.Router();
 // Get current user profile
 router.get('/profile', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const userId = req.user.id;
+    const userId = req.user!.id;
 
     const result = await db.query(
       `SELECT id, email, name, phone, role, created_at, updated_at
@@ -41,7 +41,7 @@ router.put('/profile', [
       res.status(400).json({ errors: errors.array() });
     }
 
-    const userId = req.user.id;
+    const userId = req.user!.id;
     const { name, phone } = req.body;
 
     const result = await db.query(
@@ -73,7 +73,7 @@ router.post('/change-password', [
       res.status(400).json({ errors: errors.array() });
     }
 
-    const userId = req.user.id;
+    const userId = req.user!.id;
     const { current_password, new_password } = req.body;
 
     // Get current password hash
@@ -194,7 +194,7 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req: AuthRequest, 
     const { id } = req.params;
 
     // Prevent admin from deleting themselves
-    if (parseInt(id) === req.user.id) {
+    if (parseInt(id) === req.user!.id) {
       res.status(400).json({ error: 'Cannot delete your own account' });
     }
 

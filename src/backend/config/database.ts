@@ -20,7 +20,8 @@ pool.on('connect', () => {
 
 pool.on('error', (err: Error) => {
   console.error('❌ Unexpected database error:', err);
-  process.exit(-1);
+  // Don't exit, just log the error
+  console.error('Database connection error - continuing anyway');
 });
 
 // Helper function to execute queries

@@ -1,33 +1,136 @@
-import { Calendar, DollarSign, Users, Star, Hotel } from 'lucide-react';
+import { useEffect } from 'react';
+import { Calendar, DollarSign, Users, Star, Hotel, Loader2, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import backgroundImage from '../../assets/image/background/Offers-section.jpeg';
-
-const statsData = [
-  { icon: Calendar, label: 'Total Bookings', value: '1,234', change: '+12.5%', trend: 'up' },
-  { icon: DollarSign, label: 'Revenue', value: 'R 2.4M', change: '+18.2%', trend: 'up' },
-  { icon: Users, label: 'Total Guests', value: '3,456', change: '+8.3%', trend: 'up' },
-  { icon: Hotel, label: 'Occupancy Rate', value: '84%', change: '+5.1%', trend: 'up' },
-  { icon: Star, label: 'Avg Rating', value: '4.8', change: '+0.2', trend: 'up' },
-];
-
-const bookingTrendData = [
-  { month: 'Jan', bookings: 85, revenue: 180000 },
-  { month: 'Feb', bookings: 92, revenue: 195000 },
-  { month: 'Mar', bookings: 105, revenue: 225000 },
-  { month: 'Apr', bookings: 98, revenue: 210000 },
-  { month: 'May', bookings: 115, revenue: 245000 },
-  { month: 'Jun', bookings: 125, revenue: 268000 },
-];
-
-const recentBookings = [
-  { id: 'BK-2025-1234', guest: 'John Doe', room: 'Luxury Penthouse', checkIn: '2025-10-25', amount: 'R 8,000', status: 'Confirmed' },
-  { id: 'BK-2025-1233', guest: 'Jane Smith', room: 'Deluxe Ocean View', checkIn: '2025-10-24', amount: 'R 5,000', status: 'Confirmed' },
-  { id: 'BK-2025-1232', guest: 'Mike Johnson', room: 'Standard Suite', checkIn: '2025-10-23', amount: 'R 1,200', status: 'Pending' },
-  { id: 'BK-2025-1231', guest: 'Sarah Williams', room: 'Presidential Suite', checkIn: '2025-10-22', amount: 'R 7,950', status: 'Confirmed' },
-];
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import {
+  fetchDashboardStats,
+  fetchBookingTrends,
+  fetchRevenueTrends,
+  fetchRecentBookings,
+} from '../../store/slices/analyticsSlice';
 
 export function AdminOverview() {
+  const dispatch = useAppDispatch();
+  const { dashboardStats, bookingTrends, revenueTrends, recentBookings, loading, error } = useAppSelector(
+    (state) => state.analytics
+  );
+
+  useEffect(() => {
+    // Fetch all analytics data on component mount
+    dispatch(fetchDashboardStats());
+    dispatch(fetchBookingTrends({ period: 'month' }));
+    dispatch(fetchRevenueTrends({ period: 'month' }));
+    dispatch(fetchRecentBookings(5));
+  }, [dispatch]);
+
+  // Prepare stats data from Redux state
+  const statsData = dashboardStats
+    ? [
+        {
+          icon: Calendar,
+          label: 'Total Bookings',
+          value: dashboardStats.totalBookings.toLocaleString(),
+          change: '+12.5%',
+          trend: 'up' as const,
+        },
+        {
+          icon: DollarSign,
+          label: 'Revenue',
+          value: `R ${(dashboardStats.totalRevenue / 1000000).toFixed(1)}M`,
+          change: '+18.2%',
+          trend: 'up' as const,
+        },
+        {
+          icon: Users,
+          label: 'Total Guests',
+          value: dashboardStats.totalGuests.toLocaleString(),
+          change: '+8.3%',
+          trend: 'up' as const,
+        },
+        {
+          icon: Hotel,
+          label: 'Occupancy Rate',
+          value: `${dashboardStats.occupancyRate}%`,
+          change: '+5.1%',
+          trend: 'up' as const,
+        },
+        {
+          icon: Star,
+          label: 'Avg Rating',
+          value: dashboardStats.averageRating.toFixed(1),
+          change: '+0.2',
+          trend: 'up' as const,
+        },
+      ]
+    : [];
+
+  // Transform booking trends for chart (use month name from date)
+  const bookingTrendData = bookingTrends.map((trend) => ({
+    month: new Date(trend.date).toLocaleDateString('en-US', { month: 'short' }),
+    bookings: trend.bookings,
+    revenue: trend.revenue,
+  }));
+
+  // Loading state
+  if (loading && !dashboardStats) {
+    return (
+      <div className="relative p-4 sm:p-6 space-y-4 sm:space-y-6 min-h-screen">
+        <div 
+          className="fixed inset-0 bg-cover bg-center"
+          style={{ 
+            backgroundImage: `url(${backgroundImage})`,
+            zIndex: -2
+          }}
+        />
+        <div 
+          className="fixed inset-0"
+          style={{ 
+            backgroundColor: 'rgba(0, 28, 67, 0.5)',
+            zIndex: -1
+          }}
+        />
+        <Card className="bg-gray-light border-gray-text/20">
+          <CardContent className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-primary" />
+            <span className="ml-3 text-gray-text">Loading analytics data...</span>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="relative p-4 sm:p-6 space-y-4 sm:space-y-6 min-h-screen">
+        <div 
+          className="fixed inset-0 bg-cover bg-center"
+          style={{ 
+            backgroundImage: `url(${backgroundImage})`,
+            zIndex: -2
+          }}
+        />
+        <div 
+          className="fixed inset-0"
+          style={{ 
+            backgroundColor: 'rgba(0, 28, 67, 0.5)',
+            zIndex: -1
+          }}
+        />
+        <Card className="bg-red-50 border-red-200">
+          <CardContent className="flex items-center py-4">
+            <AlertCircle className="h-5 w-5 text-red-600 mr-3" />
+            <div>
+              <p className="text-red-800 font-medium">Error loading analytics</p>
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
   return (
     <div className="relative p-4 sm:p-6 space-y-4 sm:space-y-6 min-h-screen">
       {/* Background Image */}
@@ -147,11 +250,15 @@ export function AdminOverview() {
               <tbody>
                 {recentBookings.map((booking) => (
                   <tr key={booking.id} className="border-b border-gray-text/10 hover:bg-white/50">
-                    <td className="py-2 sm:py-3 px-3 sm:px-4 text-black text-xs sm:text-sm font-medium">{booking.id}</td>
-                    <td className="py-2 sm:py-3 px-3 sm:px-4 text-black text-xs sm:text-sm">{booking.guest}</td>
-                    <td className="py-2 sm:py-3 px-3 sm:px-4 text-gray-text text-xs sm:text-sm">{booking.room}</td>
-                    <td className="py-2 sm:py-3 px-3 sm:px-4 text-gray-text text-xs sm:text-sm">{booking.checkIn}</td>
-                    <td className="py-2 sm:py-3 px-3 sm:px-4 text-black text-xs sm:text-sm font-medium">{booking.amount}</td>
+                    <td className="py-2 sm:py-3 px-3 sm:px-4 text-black text-xs sm:text-sm font-medium">{booking.reference}</td>
+                    <td className="py-2 sm:py-3 px-3 sm:px-4 text-black text-xs sm:text-sm">{booking.guest_name}</td>
+                    <td className="py-2 sm:py-3 px-3 sm:px-4 text-gray-text text-xs sm:text-sm">{booking.room_name}</td>
+                    <td className="py-2 sm:py-3 px-3 sm:px-4 text-gray-text text-xs sm:text-sm">
+                      {new Date(booking.check_in_date).toLocaleDateString()}
+                    </td>
+                    <td className="py-2 sm:py-3 px-3 sm:px-4 text-black text-xs sm:text-sm font-medium">
+                      R {booking.total_price.toLocaleString()}
+                    </td>
                     <td className="py-2 sm:py-3 px-3 sm:px-4">
                       <span
                         className="px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium text-white"

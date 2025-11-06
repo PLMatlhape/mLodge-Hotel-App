@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { logout } from '../../store/slices/authSlice';
+import { fetchAccommodations, selectRoom as selectRoomAction } from '../../store/slices/roomsSlice';
 import logo from '../../assets/image/Erxtras/Logo-mLodge-hotel.png';
 import searchIcon from '../../assets/icons/black/black-search-icon.png';
 import filterIcon from '../../assets/icons/black/black-filter-icon.png';
@@ -9,14 +10,6 @@ import starIcon from '../../assets/icons/yellow-star-rate-icon.png';
 import bathIcon from '../../assets/icons/black/black-bath-icon.png';
 import backgroundImage from '../../assets/image/background/Client-Page.jpeg';
 import RoomDetails from './RoomDetails';
-// Room Images
-import luxuryPenthouse from '../../assets/image/dashboard/penthouse-room.jpeg';
-import deluxeOcean from '../../assets/image/dashboard/Deluxe Ocean View.jpeg';
-import executiveBusiness from '../../assets/image/dashboard/Executive-business-room.jpeg';
-import familySuite from '../../assets/image/dashboard/Family Suite.jpeg';
-import presidentialSuite from '../../assets/image/dashboard/Presidential Suite.jpeg';
-import standardComfort from '../../assets/image/dashboard/Standard Comfort Room.jpeg';
-import romanticHoneymoon from '../../assets/image/dashboard/Romantic Honeymoon Suite.jpeg';
 
 interface Room {
   id: number;
@@ -38,6 +31,8 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const { rooms: reduxRooms, loading, error } = useAppSelector((state) => state.rooms);
+  
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(true);
@@ -48,126 +43,41 @@ const Dashboard: React.FC = () => {
   const [guestCount, setGuestCount] = useState('');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
-  const [rooms, setRooms] = useState<Room[]>([
-    {
-      id: 1,
-      name: "Luxury Penthouse",
-      location: "Cape Town",
-      beds: 3,
-      baths: 2,
-      area: 95,
-      guests: "upto 4 guests",
-      price: 8800,
-      rating: 5,
-      image: luxuryPenthouse,
-      images: [luxuryPenthouse, deluxeOcean, executiveBusiness],
-      badge: "Premium",
-      favorite: false
-    },
-    {
-      id: 2,
-      name: "Deluxe Ocean View",
-      location: "Durban",
-      beds: 2,
-      baths: 1,
-      area: 67,
-      guests: "upto 2 guests",
-      price: 5000,
-      rating: 4.6,
-      image: deluxeOcean,
-      images: [deluxeOcean, familySuite, standardComfort],
-      badge: "Delux",
-      favorite: false
-    },
-    {
-      id: 3,
-      name: "Executive Business Suite",
-      location: "Johannesburg",
-      beds: 1,
-      baths: 1,
-      area: 45,
-      guests: "upto 2 guests",
-      price: 6800,
-      rating: 4.9,
-      image: executiveBusiness,
-      images: [executiveBusiness, presidentialSuite, romanticHoneymoon],
-      badge: "Business",
-      favorite: false
-    },
-    {
-      id: 4,
-      name: "Family Suite",
-      location: "Pretoria",
-      beds: 3,
-      baths: 2,
-      area: 85,
-      guests: "upto 6 guests",
-      price: 4450,
-      rating: 4.5,
-      image: familySuite,
-      images: [familySuite, luxuryPenthouse, deluxeOcean],
-      badge: "Premium",
-      favorite: false
-    },
-    {
-      id: 5,
-      name: "Presidential Suite",
-      location: "Cape Town",
-      beds: 2,
-      baths: 2,
-      area: 120,
-      guests: "upto 4 guests",
-      price: 7350,
-      rating: 4.7,
-      image: presidentialSuite,
-      images: [presidentialSuite, executiveBusiness, familySuite],
-      badge: "Delux",
-      favorite: false
-    },
-    {
-      id: 6,
-      name: "Standard Comfort Room",
-      location: "Pretoria",
-      beds: 1,
-      baths: 1,
-      area: 35,
-      guests: "upto 2 guests",
-      price: 2500,
-      rating: 4.2,
-      image: standardComfort,
-      images: [standardComfort, deluxeOcean, romanticHoneymoon],
-      badge: "Standard",
-      favorite: false
-    },
-    {
-      id: 7,
-      name: "Romantic Honeymoon Suite",
-      location: "Durban",
-      beds: 1,
-      baths: 1,
-      area: 55,
-      guests: "upto 2 guests",
-      price: 3800,
-      rating: 5,
-      image: romanticHoneymoon,
-      images: [romanticHoneymoon, presidentialSuite, luxuryPenthouse],
-      badge: "Premium",
-      favorite: false
-    }
-  ]);
+  // Fetch accommodations on component mount
+  useEffect(() => {
+    dispatch(fetchAccommodations({ limit: 50 }));
+  }, [dispatch]);
 
-  const toggleFavorite = (roomId: number) => {
+  // Transform Redux rooms to match display format
+  const rooms = reduxRooms.map((room) => {
+    const roomData = room as unknown as Record<string, unknown>;
+    return {
+      id: roomData.id as number,
+      name: roomData.name as string,
+      location: (roomData.location as string) || (roomData.city as string) || 'Unknown',
+      beds: (roomData.beds as number) || 1,
+      baths: (roomData.baths as number) || 1,
+      area: (roomData.size as number) || (roomData.area as number) || 0,
+      guests: (roomData.guests as string) || `upto ${(roomData.capacity as number) || 2} guests`,
+      price: (roomData.price_per_night as number) || (roomData.price as number) || 0,
+      rating: (roomData.rating as number) || 4.5,
+      image: (roomData.image as string) || ((roomData.images as string[])?.[0]) || '',
+      images: (roomData.images as string[]) || ((roomData.image as string) ? [roomData.image as string] : []),
+      badge: (roomData.type as string) || (roomData.badge as string) || 'Standard',
+      favorite: false
+    };
+  });
+
+  const toggleFavoriteLocal = (roomId: number) => {
     // Check if user is authenticated before allowing favorite toggle
     if (!isAuthenticated) {
       navigate('/login');
       return;
     }
 
-    setRooms(prevRooms =>
-      prevRooms.map(room =>
-        room.id === roomId ? { ...room, favorite: !room.favorite } : room
-      )
-    );
+    // TODO: Call backend API to toggle favorite
+    // For now, just dispatch to Redux
+    dispatch(selectRoomAction(rooms.find(r => r.id === roomId) || null));
   };
 
   const filteredRooms = rooms.filter(room => {
@@ -454,7 +364,22 @@ const Dashboard: React.FC = () => {
 
           {/* Room Cards Grid */}
           <div className="flex-1">
-            {filteredRooms.length === 0 ? (
+            {loading ? (
+              <div className="bg-white rounded-lg p-12 text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0F51AF] mx-auto"></div>
+                <p className="text-gray-600 mt-4">Loading accommodations...</p>
+              </div>
+            ) : error ? (
+              <div className="bg-white rounded-lg p-12 text-center">
+                <p className="text-red-600 mb-4">{error}</p>
+                <button 
+                  onClick={() => dispatch(fetchAccommodations({ limit: 50 }))}
+                  className="px-6 py-2 bg-[#0F51AF] text-white rounded-lg hover:bg-blue-700"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : filteredRooms.length === 0 ? (
               <div className="bg-white rounded-lg p-12 text-center">
                 <svg className="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -468,7 +393,7 @@ const Dashboard: React.FC = () => {
                 <div key={room.id} className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
                   {/* Room Image */}
                   <div className="relative h-48">
-                    <img src={room.image} alt={room.name} className="w-full h-full object-cover" />
+                    <img src={room.image || '/placeholder-room.jpg'} alt={room.name} className="w-full h-full object-cover" />
                     
                     {/* Badge */}
                     <div className={`absolute top-3 left-3 ${getBadgeColor(room.badge)} text-white px-3 py-1 rounded-lg text-xs font-semibold uppercase`}>
@@ -483,7 +408,7 @@ const Dashboard: React.FC = () => {
 
                     {/* Favorite */}
                     <button 
-                      onClick={() => toggleFavorite(room.id)}
+                      onClick={() => toggleFavoriteLocal(room.id)}
                       className={`absolute bottom-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
                         room.favorite ? 'bg-red-500' : 'bg-white/90 backdrop-blur-sm hover:bg-white'
                       }`}

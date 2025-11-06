@@ -55,7 +55,7 @@ router.get('/accommodation/:accommodationId', [
 // Get user's reviews
 router.get('/my-reviews', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const userId = req.user.id;
+    const userId = req.user!.id;
 
     const result = await db.query(
       `SELECT r.*,
@@ -89,7 +89,7 @@ router.post('/', [
     }
 
     const { accommodation_id, rating, comment } = req.body;
-    const userId = req.user.id;
+    const userId = req.user!.id;
 
     // Check if user has completed booking for this accommodation
     const hasBooking = await db.query(
@@ -147,7 +147,7 @@ router.put('/:id', [
 
     const { id } = req.params;
     const { rating, comment } = req.body;
-    const userId = req.user.id;
+    const userId = req.user!.id;
 
     // Check if review exists and belongs to user
     const review = await db.query(
@@ -184,8 +184,8 @@ router.put('/:id', [
 router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
-    const isAdmin = req.user.role === 'admin';
+    const userId = req.user!.id;
+    const isAdmin = req.user!.role === 'admin';
 
     // Check if review exists
     const review = await db.query(
@@ -234,6 +234,220 @@ router.get('/accommodation/:accommodationId/summary', async (req: AuthRequest, r
   } catch (error) {
     console.error('Error fetching rating summary:', error);
     res.status(500).json({ error: 'Failed to fetch rating summary' });
+  }
+});
+
+// ========== ADMIN ENDPOINTS ==========
+
+// Get all reviews (Admin)
+router.get('/admin/all', authenticateToken, requireAdmin, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const offset = (page - 1) * limit;
+    const status = req.query.status as string;
+
+    let query = `
+      SELECT r.*,
+             u.name as user_name, u.email as user_email,
+             a.name as accommodation_name
+      FROM reviews r
+      JOIN users u ON r.user_id = u.id
+      JOIN accommodations a ON r.accommodation_id = a.id
+    `;
+
+    const params: (string | number)[] = [limit, offset];
+
+    if (status) {
+      query += ' WHERE r.status = $3';
+      params.push(status);
+    }
+
+    query += ' ORDER BY r.created_at DESC LIMIT $1 OFFSET $2';
+
+    const result = await db.query(query, params);
+
+    const countQuery = status
+      ? 'SELECT COUNT(*) as total FROM reviews WHERE status = $1'
+      : 'SELECT COUNT(*) as total FROM reviews';
+    
+    const countResult = await db.query(
+      countQuery,
+      status ? [status] : []
+    );
+
+    const total = parseInt(countResult.rows[0].total);
+
+    res.json({
+      reviews: result.rows,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching all reviews:', error);
+    res.status(500).json({ error: 'Failed to fetch reviews' });
+  }
+});
+
+// Get pending reviews (Admin)
+router.get('/admin/pending', authenticateToken, requireAdmin, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const offset = (page - 1) * limit;
+
+    const result = await db.query(
+      `SELECT r.*,
+              u.name as user_name, u.email as user_email,
+              a.name as accommodation_name
+       FROM reviews r
+       JOIN users u ON r.user_id = u.id
+       JOIN accommodations a ON r.accommodation_id = a.id
+       WHERE r.status = 'pending'
+       ORDER BY r.created_at ASC
+       LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
+
+    const countResult = await db.query(
+      "SELECT COUNT(*) as total FROM reviews WHERE status = 'pending'"
+    );
+
+    const total = parseInt(countResult.rows[0].total);
+
+    res.json({
+      reviews: result.rows,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching pending reviews:', error);
+    res.status(500).json({ error: 'Failed to fetch pending reviews' });
+  }
+});
+
+// Approve review (Admin)
+router.patch('/:id/approve', authenticateToken, requireAdmin, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const result = await db.query(
+      `UPDATE reviews
+       SET status = 'approved',
+           reviewed_by = $1,
+           reviewed_at = CURRENT_TIMESTAMP,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2 AND status = 'pending'
+       RETURNING *`,
+      [req.user!.id, id]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'Review not found or already processed' });
+      return;
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error approving review:', error);
+    res.status(500).json({ error: 'Failed to approve review' });
+  }
+});
+
+// Reject review (Admin)
+router.patch('/:id/reject', authenticateToken, requireAdmin, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    const result = await db.query(
+      `UPDATE reviews
+       SET status = 'rejected',
+           rejection_reason = $1,
+           reviewed_by = $2,
+           reviewed_at = CURRENT_TIMESTAMP,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $3 AND status = 'pending'
+       RETURNING *`,
+      [reason || null, req.user!.id, id]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'Review not found or already processed' });
+      return;
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error rejecting review:', error);
+    res.status(500).json({ error: 'Failed to reject review' });
+  }
+});
+
+// Flag review (Admin)
+router.patch('/:id/flag', authenticateToken, requireAdmin, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    const result = await db.query(
+      `UPDATE reviews
+       SET is_flagged = true,
+           flag_reason = $1,
+           flagged_by = $2,
+           flagged_at = CURRENT_TIMESTAMP,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $3
+       RETURNING *`,
+      [reason || null, req.user!.id, id]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'Review not found' });
+      return;
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error flagging review:', error);
+    res.status(500).json({ error: 'Failed to flag review' });
+  }
+});
+
+// Unflag review (Admin)
+router.patch('/:id/unflag', authenticateToken, requireAdmin, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const result = await db.query(
+      `UPDATE reviews
+       SET is_flagged = false,
+           flag_reason = NULL,
+           flagged_by = NULL,
+           flagged_at = NULL,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1
+       RETURNING *`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'Review not found' });
+      return;
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error unflagging review:', error);
+    res.status(500).json({ error: 'Failed to unflag review' });
   }
 });
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, CheckCircle, XCircle, AlertTriangle, Star } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
@@ -7,26 +7,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from '../../components/ui/badge';
 import { toast } from '../../lib/toast';
 import backgroundImage from '../../assets/image/background/Offers-section.jpeg';
-
-const mockReviews = [
-  { id: 'RV-001', guest: 'John Doe', room: 'Luxury Penthouse', rating: 5, comment: 'Absolutely amazing experience! The view was breathtaking and service was impeccable.', date: '2025-10-18', status: 'Pending', flagged: false, bookingId: 'BK-2025-1234' },
-  { id: 'RV-002', guest: 'Jane Smith', room: 'Deluxe Ocean View', rating: 4, comment: 'Great stay, loved the ocean view. Only minor issue was the WiFi speed.', date: '2025-10-17', status: 'Approved', flagged: false, bookingId: 'BK-2025-1233' },
-  { id: 'RV-003', guest: 'Mike Johnson', room: 'Standard Suite', rating: 2, comment: 'This place was terrible! Dirty rooms and rude staff. Would not recommend!', date: '2025-10-16', status: 'Pending', flagged: true, bookingId: 'BK-2025-1232' },
-  { id: 'RV-004', guest: 'Sarah Williams', room: 'Presidential Suite', rating: 5, comment: 'Perfect for our anniversary! Staff went above and beyond.', date: '2025-10-15', status: 'Approved', flagged: false, bookingId: 'BK-2025-1231' },
-  { id: 'RV-005', guest: 'David Brown', room: 'Deluxe City View', rating: 3, comment: 'Decent hotel but overpriced for what you get.', date: '2025-10-14', status: 'Pending', flagged: false, bookingId: 'BK-2025-1230' },
-  { id: 'RV-006', guest: 'Emily Davis', room: 'Standard Room', rating: 1, comment: 'Worst experience ever! Full of inappropriate language and spam content here.', date: '2025-10-13', status: 'Rejected', flagged: true, bookingId: 'BK-2025-1229' },
-];
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { fetchAllReviews, updateReviewStatus } from '../../store/slices/reviewsSlice';
 
 export function AdminReviewModeration() {
-  const [reviews, setReviews] = useState(mockReviews);
+  const dispatch = useAppDispatch();
+  const { reviews, loading, error } = useAppSelector((state) => state.reviews);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterRating, setFilterRating] = useState('all');
 
+  // Fetch reviews on mount
+  useEffect(() => {
+    dispatch(fetchAllReviews({ page: 1, limit: 100 }));
+  }, [dispatch]);
+
   const filteredReviews = reviews.filter(review => {
     const matchesSearch = 
-      review.guest.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      review.room.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      review.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      review.accommodation_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       review.comment.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = filterStatus === 'all' || review.status === filterStatus;
@@ -35,31 +34,47 @@ export function AdminReviewModeration() {
     return matchesSearch && matchesStatus && matchesRating;
   });
 
-  const handleApprove = (reviewId: string) => {
-    setReviews(reviews.map(r => 
-      r.id === reviewId ? { ...r, status: 'Approved' } : r
-    ));
-    toast.success('Review approved and published');
+  const handleApprove = async (reviewId: string) => {
+    try {
+      await dispatch(updateReviewStatus({ 
+        id: parseInt(reviewId), 
+        status: 'approved' 
+      })).unwrap();
+      toast.success('Review approved and published');
+      // Refresh reviews
+      dispatch(fetchAllReviews({ page: 1, limit: 100 }));
+    } catch (err) {
+      toast.error('Failed to approve review');
+      console.error('Error approving review:', err);
+    }
   };
 
-  const handleReject = (reviewId: string) => {
-    setReviews(reviews.map(r => 
-      r.id === reviewId ? { ...r, status: 'Rejected' } : r
-    ));
-    toast.success('Review rejected');
+  const handleReject = async (reviewId: string) => {
+    try {
+      await dispatch(updateReviewStatus({ 
+        id: parseInt(reviewId), 
+        status: 'rejected' 
+      })).unwrap();
+      toast.success('Review rejected');
+      // Refresh reviews
+      dispatch(fetchAllReviews({ page: 1, limit: 100 }));
+    } catch (err) {
+      toast.error('Failed to reject review');
+      console.error('Error rejecting review:', err);
+    }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Pending': return { bg: '#ffa500', text: '#FFFFFF' };
-      case 'Approved': return { bg: '#0F51AF', text: '#FFFFFF' };
-      case 'Rejected': return { bg: '#ff4444', text: '#ffffff' };
+      case 'pending': return { bg: '#ffa500', text: '#FFFFFF' };
+      case 'approved': return { bg: '#0F51AF', text: '#FFFFFF' };
+      case 'rejected': return { bg: '#ff4444', text: '#ffffff' };
       default: return { bg: '#666', text: '#ffffff' };
     }
   };
 
-  const pendingCount = reviews.filter(r => r.status === 'Pending').length;
-  const flaggedCount = reviews.filter(r => r.flagged && r.status === 'Pending').length;
+  const pendingCount = reviews.filter(r => r.status === 'pending').length;
+  const flaggedCount = 0; // Flagged feature not implemented yet
 
   return (
     <div className="relative p-6 space-y-6">
@@ -129,6 +144,30 @@ export function AdminReviewModeration() {
         </Card>
       </div>
 
+      {/* Loading State */}
+      {loading && (
+        <Card style={{ backgroundColor: '#D9D9D9', borderColor: 'rgba(0, 28, 67, 0.2)' }}>
+          <CardContent className="p-6 text-center">
+            <div className="flex items-center justify-center gap-2">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2" style={{ borderColor: '#0F51AF' }}></div>
+              <p style={{ color: '#000000' }}>Loading reviews...</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <Card style={{ backgroundColor: '#ff4444', borderColor: '#cc0000' }}>
+          <CardContent className="p-6">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" style={{ color: '#FFFFFF' }} />
+              <p style={{ color: '#FFFFFF' }}>Error: {error}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Filters */}
       <Card style={{ backgroundColor: '#D9D9D9', borderColor: 'rgba(0, 28, 67, 0.2)' }}>
         <CardContent className="p-6">
@@ -149,9 +188,9 @@ export function AdminReviewModeration() {
               </SelectTrigger>
               <SelectContent style={{ backgroundColor: '#D9D9D9', borderColor: 'rgba(0, 28, 67, 0.2)' }}>
                 <SelectItem value="all" style={{ color: '#000000' }}>All Statuses</SelectItem>
-                <SelectItem value="Pending" style={{ color: '#000000' }}>Pending</SelectItem>
-                <SelectItem value="Approved" style={{ color: '#000000' }}>Approved</SelectItem>
-                <SelectItem value="Rejected" style={{ color: '#000000' }}>Rejected</SelectItem>
+                <SelectItem value="pending" style={{ color: '#000000' }}>Pending</SelectItem>
+                <SelectItem value="approved" style={{ color: '#000000' }}>Approved</SelectItem>
+                <SelectItem value="rejected" style={{ color: '#000000' }}>Rejected</SelectItem>
               </SelectContent>
             </Select>
             <Select value={filterRating} onValueChange={setFilterRating}>
@@ -176,12 +215,12 @@ export function AdminReviewModeration() {
         {filteredReviews.map((review) => {
           const statusColor = getStatusColor(review.status);
           return (
-            <Card key={review.id} style={{ backgroundColor: '#D9D9D9', borderColor: review.flagged ? '#ff4444' : 'rgba(0, 28, 67, 0.2)' }}>
+            <Card key={review.id} style={{ backgroundColor: '#D9D9D9', borderColor: 'rgba(0, 28, 67, 0.2)' }}>
               <CardContent className="p-6">
                 <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <h3 style={{ color: '#000000' }}>{review.guest}</h3>
+                      <h3 style={{ color: '#000000' }}>{review.user_name || 'Anonymous'}</h3>
                       <div className="flex items-center gap-1">
                         {[...Array(5)].map((_, i) => (
                           <Star
@@ -194,26 +233,24 @@ export function AdminReviewModeration() {
                           />
                         ))}
                       </div>
-                      <Badge style={{ backgroundColor: statusColor.bg, color: statusColor.text }}>
+                      <Badge style={{ 
+                        backgroundColor: statusColor.bg, 
+                        color: statusColor.text,
+                        textTransform: 'capitalize'
+                      }}>
                         {review.status}
                       </Badge>
-                      {review.flagged && (
-                        <Badge style={{ backgroundColor: '#ff4444', color: '#ffffff' }}>
-                          <AlertTriangle className="h-3 w-3 mr-1" />
-                          Flagged
-                        </Badge>
-                      )}
                     </div>
                     <p style={{ color: '#627182', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
-                      {review.room} • {review.date} • Booking: {review.bookingId}
+                      {review.accommodation_name || `Room #${review.accommodation_id}`} • {new Date(review.created_at).toLocaleDateString()}
                     </p>
                     <p style={{ color: '#000000' }}>{review.comment}</p>
                   </div>
-                  {review.status === 'Pending' && (
+                  {review.status === 'pending' && (
                     <div className="flex gap-2">
                       <Button
                         size="sm"
-                        onClick={() => handleApprove(review.id)}
+                        onClick={() => handleApprove(review.id.toString())}
                         style={{ backgroundColor: '#0F51AF', color: '#FFFFFF' }}
                       >
                         <CheckCircle className="h-4 w-4 mr-1" />
@@ -221,7 +258,7 @@ export function AdminReviewModeration() {
                       </Button>
                       <Button
                         size="sm"
-                        onClick={() => handleReject(review.id)}
+                        onClick={() => handleReject(review.id.toString())}
                         style={{ backgroundColor: '#ff4444', color: '#ffffff' }}
                       >
                         <XCircle className="h-4 w-4 mr-1" />
