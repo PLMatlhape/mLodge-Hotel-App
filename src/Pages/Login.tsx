@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAppDispatch } from '../store/hooks';
 import { loginSuccess } from '../store/slices/authSlice';
+import api from '../services/api';
 import loginBg from '../assets/image/background/login-background.jpeg';
 import centerImage from '../assets/image/background/Offers-section.jpeg';
 import backIcon from '../assets/icons/white/white-back-button-icon.png';
@@ -19,26 +20,13 @@ const Login: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // Call backend API for authentication
-      const response = await fetch('http://localhost:5001/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: username,
-          password: password,
-        }),
+      // Call backend API for authentication using the API service
+      const response = await api.post('/auth/login', {
+        email: username,
+        password: password,
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        alert(error.error || 'Login failed. Please check your credentials.');
-        setIsLoading(false);
-        return;
-      }
-
-      const data = await response.json();
+      const data = response.data;
       
       // Store token in localStorage
       localStorage.setItem('token', data.token);
@@ -61,9 +49,18 @@ const Login: React.FC = () => {
       } else {
         navigate('/dashboard');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Login error:', error);
-      alert('An error occurred during login. Please try again.');
+      let errorMessage = 'An error occurred during login. Please try again.';
+      
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { error?: string } }; message?: string };
+        errorMessage = axiosError.response?.data?.error || axiosError.message || errorMessage;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      alert(errorMessage);
     } finally {
       setIsLoading(false);
     }

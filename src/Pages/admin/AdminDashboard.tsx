@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import AdminLayout from '../../components/AdminLayout';
 import { AdminOverview } from './Overview';
-import { AdminBookings } from './BookingsNew';
+import { AdminBookings } from './Bookings';
 import { AdminStaff } from './Staff';
 import { AdminRefunds } from './Refunds';
 import { AdminReviewModeration } from './ReviewModeration';

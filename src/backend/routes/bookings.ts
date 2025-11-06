@@ -99,6 +99,7 @@ router.get('/:id', authenticateToken, async (req: AuthRequest, res: Response): P
 
     if (result.rows.length === 0) {
       res.status(404).json({ error: 'Booking not found' });
+      return;
     }
 
     res.json(result.rows[0]);
@@ -129,6 +130,7 @@ router.post('/', [
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       res.status(400).json({ errors: errors.array() });
+      return;
     }
 
     const {
@@ -154,13 +156,15 @@ router.post('/', [
 
     if (checkIn < today) {
       res.status(400).json({ error: 'Check-in date cannot be in the past' });
+      return;
     }
 
     if (checkOut <= checkIn) {
       res.status(400).json({ error: 'Check-out date must be after check-in date' });
+      return;
     }
 
-    const nights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
+    const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
 
     await client.query('BEGIN');
 
@@ -192,6 +196,7 @@ router.post('/', [
           res.status(400).json({
             error: `Insufficient rooms available for room ID ${room.room_id}. Available: ${available}, Requested: ${room.quantity}`
           });
+          return;
         }
       }
     }
@@ -209,6 +214,7 @@ router.post('/', [
       if (roomPrice.rows.length === 0) {
         await client.query('ROLLBACK');
         res.status(404).json({ error: `Room ${room.room_id} not found` });
+        return;
       }
 
       const pricePerNight = parseFloat(roomPrice.rows[0].price_per_night);
@@ -283,6 +289,7 @@ router.patch('/:id/status', [
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       res.status(400).json({ errors: errors.array() });
+      return;
     }
 
     const { id } = req.params;
@@ -298,6 +305,7 @@ router.patch('/:id/status', [
 
     if (booking.rows.length === 0) {
       res.status(404).json({ error: 'Booking not found' });
+      return;
     }
 
     const ownBooking = booking.rows[0].user_id === userId;
@@ -305,6 +313,7 @@ router.patch('/:id/status', [
     // Users can only cancel their own bookings
     if (!isAdmin && (!ownBooking || status !== 'cancelled')) {
       res.status(403).json({ error: 'Unauthorized to update booking status' });
+      return;
     }
 
     const result = await db.query(

@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { fetchAllPromoCodes } from '../store/slices/promoCodesSlice';
 import offersBg from '../assets/image/background/Offers-section.jpeg';
 import chefImage from '../assets/image/special-offers/chef.jpeg';
 import buffetImage from '../assets/image/special-offers/buffet.jpeg';
@@ -19,35 +21,61 @@ interface OfferCard {
 }
 
 const Offers: React.FC = () => {
-  const offers: OfferCard[] = [
-    {
-      id: 1,
-      title: "Chef's Signature Platter",
-      description: "Exquisite selection of gourmet dishes crafted by our award-winning chef",
-      price: 450,
-      originalPrice: 650,
-      image: chefImage,
-      discount: "Save 30%"
-    },
-    {
-      id: 2,
-      title: "Breakfast Buffet Special",
-      description: "All-you-can-eat breakfast buffet with international cuisine",
-      price: 280,
-      originalPrice: 300,
-      image: buffetImage,
-      discount: "Save 20%"
-    },
-    {
-      id: 3,
-      title: "Romantic Dinner for Two",
-      description: "Candlelit dinner with premium wine pairing and dessert",
-      price: 1200,
-      originalPrice: 1600,
-      image: romanticDinnerImage,
-      discount: "Save 25%"
-    }
-  ];
+  const dispatch = useAppDispatch();
+  const { promoCodes, loading } = useAppSelector((state) => state.promoCodes);
+
+  // Fetch promo codes from API on component mount
+  useEffect(() => {
+    dispatch(fetchAllPromoCodes({ limit: 10, isActive: true }));
+  }, [dispatch]);
+
+  // Default images for offers
+  const defaultImages = [chefImage, buffetImage, romanticDinnerImage];
+
+  // Map promo codes to offers format, or use fallback static data if API fails
+  const offers: OfferCard[] = promoCodes.length > 0 
+    ? promoCodes.slice(0, 3).map((promo, index) => ({
+        id: promo.id,
+        title: promo.code,
+        description: promo.description || 'Exclusive promotional offer',
+        price: promo.type === 'Percentage' 
+          ? Math.round(500 * (1 - promo.discount_value / 100)) // Estimated price after discount
+          : Math.round(500 - promo.discount_value),
+        originalPrice: 500, // Base price
+        image: defaultImages[index % defaultImages.length],
+        discount: promo.type === 'Percentage' 
+          ? `Save ${promo.discount_value}%` 
+          : `Save R${promo.discount_value}`
+      }))
+    : [
+        {
+          id: 1,
+          title: "Chef's Signature Platter",
+          description: "Exquisite selection of gourmet dishes crafted by our award-winning chef",
+          price: 450,
+          originalPrice: 650,
+          image: chefImage,
+          discount: "Save 30%"
+        },
+        {
+          id: 2,
+          title: "Breakfast Buffet Special",
+          description: "All-you-can-eat breakfast buffet with international cuisine",
+          price: 280,
+          originalPrice: 300,
+          image: buffetImage,
+          discount: "Save 20%"
+        },
+        {
+          id: 3,
+          title: "Romantic Dinner for Two",
+          description: "Candlelit dinner with premium wine pairing and dessert",
+          price: 1200,
+          originalPrice: 1600,
+          image: romanticDinnerImage,
+          discount: "Save 25%"
+        }
+      ];
 
   return (
     <div className="relative min-h-screen py-20">
@@ -75,7 +103,12 @@ const Offers: React.FC = () => {
 
         {/* Offers Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
-          {offers.map((offer) => (
+          {loading ? (
+            <div className="col-span-3 text-center text-white text-xl py-12">
+              Loading offers...
+            </div>
+          ) : (
+            offers.map((offer) => (
             <div 
               key={offer.id}
               className="bg-white rounded-2xl overflow-hidden shadow-xl transform transition-transform hover:scale-105"
@@ -121,7 +154,8 @@ const Offers: React.FC = () => {
                 </div>
               </div>
             </div>
-          ))}
+          ))
+          )}
         </div>
 
         {/* About Section with Images */}

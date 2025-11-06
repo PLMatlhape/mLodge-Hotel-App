@@ -20,6 +20,7 @@ router.get('/profile', authenticateToken, async (req: AuthRequest, res: Response
 
     if (result.rows.length === 0) {
       res.status(404).json({ error: 'User not found' });
+      return;
     }
 
     res.json(result.rows[0]);
@@ -39,6 +40,7 @@ router.put('/profile', [
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       res.status(400).json({ errors: errors.array() });
+      return;
     }
 
     const userId = req.user!.id;
@@ -71,6 +73,7 @@ router.post('/change-password', [
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       res.status(400).json({ errors: errors.array() });
+      return;
     }
 
     const userId = req.user!.id;
@@ -78,18 +81,20 @@ router.post('/change-password', [
 
     // Get current password hash
     const user = await db.query(
-      'SELECT password_hash FROM users WHERE id = $1',
+      'SELECT password FROM users WHERE id = $1',
       [userId]
     );
 
     if (user.rows.length === 0) {
       res.status(404).json({ error: 'User not found' });
+      return;
     }
 
     // Verify current password
-    const validPassword = await bcrypt.compare(current_password, user.rows[0].password_hash);
+    const validPassword = await bcrypt.compare(current_password, user.rows[0].password);
     if (!validPassword) {
       res.status(400).json({ error: 'Current password is incorrect' });
+      return;
     }
 
     // Hash new password
@@ -97,7 +102,7 @@ router.post('/change-password', [
 
     // Update password
     await db.query(
-      'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
+      'UPDATE users SET password = $1, updated_at = NOW() WHERE id = $2',
       [newPasswordHash, userId]
     );
 
@@ -138,6 +143,7 @@ router.get('/:id', authenticateToken, requireAdmin, async (req: AuthRequest, res
 
     if (result.rows.length === 0) {
       res.status(404).json({ error: 'User not found' });
+      return;
     }
 
     res.json(result.rows[0]);
@@ -160,6 +166,7 @@ router.put('/:id', [
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       res.status(400).json({ errors: errors.array() });
+      return;
     }
 
     const { id } = req.params;
@@ -179,6 +186,7 @@ router.put('/:id', [
 
     if (result.rows.length === 0) {
       res.status(404).json({ error: 'User not found' });
+      return;
     }
 
     res.json(result.rows[0]);
@@ -196,6 +204,7 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req: AuthRequest, 
     // Prevent admin from deleting themselves
     if (parseInt(id) === req.user!.id) {
       res.status(400).json({ error: 'Cannot delete your own account' });
+      return;
     }
 
     const result = await db.query(
@@ -205,6 +214,7 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req: AuthRequest, 
 
     if (result.rows.length === 0) {
       res.status(404).json({ error: 'User not found' });
+      return;
     }
 
     res.json({ message: 'User deleted successfully' });

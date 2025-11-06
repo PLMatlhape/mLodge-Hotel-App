@@ -26,7 +26,7 @@ dotenv.config();
 
 // Initialize Express app
 const app = express();
-const PORT = process.env.PORT || 5001;
+const PORT = parseInt(process.env.PORT || '5001', 10);
 
 // Security middleware
 app.use(helmet());
@@ -79,7 +79,8 @@ interface ErrorWithStatus extends Error {
   status?: number;
 }
 
-app.use((err: ErrorWithStatus, req: Request, res: Response, _next: NextFunction) => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+app.use((err: ErrorWithStatus, _req: Request, res: Response, _next: NextFunction) => {
   console.error('❌ Error:', err);
   res.status(err.status || 500).json({
     error: err.message || 'Internal server error',
@@ -92,26 +93,47 @@ app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// Start server
-app.listen(PORT, () => {
+// Start server - Force localhost IPv4
+console.log('🔄 Attempting to start server...');
+const server = app.listen(PORT, 'localhost', () => {
+  const addr = server.address();
+  console.log(`✅ Server successfully bound to port ${PORT}`);
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 API available at http://localhost:${PORT}/api`);
-}).on('error', (err: Error) => {
+  console.log(`⏰ Server started at: ${new Date().toISOString()}`);
+  console.log(`📍 Listening on:`, addr);
+});
+
+server.on('error', (err: Error) => {
   console.error('❌ Server error:', err);
   process.exit(1);
+});
+
+server.on('listening', () => {
+  const addr = server.address();
+  console.log('🎧 Server is now listening:', addr);
 });
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (err: Error) => {
   console.error('❌ Uncaught Exception:', err);
-  process.exit(1);
+  console.error('Stack:', err.stack);
+  console.error('Process will NOT exit - investigating issue');
+  // Don't exit immediately, wait a bit to see what happens
+  setTimeout(() => {
+    console.error('⚠️ Still alive after exception');
+  }, 1000);
 });
 
 // Handle unhandled promise rejections
-process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
-  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-  process.exit(1);
+process.on('unhandledRejection', (reason: unknown) => {
+  console.error('❌ Unhandled Rejection:');
+  console.error('Reason:', reason);
+  if (reason instanceof Error) {
+    console.error('Stack:', reason.stack);
+  }
+  console.error('Process will NOT exit - investigating issue');
 });
 
 export default app;
