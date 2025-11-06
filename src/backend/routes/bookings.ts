@@ -168,10 +168,12 @@ router.post('/', [
 
     await client.query('BEGIN');
 
-    // Check room availability
+    // Check room availability and determine if booking can be auto-confirmed
+    let canAutoConfirm = true;
+    
     for (const room of rooms) {
       const availabilityCheck = await client.query(
-        `SELECT r.capacity,
+        `SELECT r.quantity,
                 COALESCE(SUM(bi.quantity), 0) as booked
          FROM rooms r
          LEFT JOIN booking_items bi ON bi.room_id = r.id
@@ -183,12 +185,47 @@ router.post('/', [
              (b.check_in_date <= $3 AND b.check_out_date >= $3) OR
              (b.check_in_date >= $2 AND b.check_out_date <= $3)
            )
-         GROUP BY r.capacity`,
+         GROUP BY r.quantity`,
         [room.room_id, check_in_date, check_out_date]
       );
 
-      // Note: We're checking capacity instead of quantity
-      // You might want to add a quantity column to rooms table if needed
+      if (availabilityCheck.rows.length > 0) {
+        const { quantity, booked } = availabilityCheck.rows[0];
+        const available = (quantity || 0) - parseInt(booked || '0');
+        
+        // Check if requested quantity is available
+        if (available < room.quantity) {
+          canAutoConfirm = false;
+          await client.query('ROLLBACK');
+          res.status(400).json({ 
+            error: `Insufficient room availability. Requested: ${room.quantity}, Available: ${available}` 
+          });
+          return;
+        }
+      } else {
+        // No existing bookings, check if room has quantity
+        const roomCheck = await client.query(
+          'SELECT quantity FROM rooms WHERE id = $1',
+          [room.room_id]
+        );
+        
+        if (roomCheck.rows.length === 0) {
+          canAutoConfirm = false;
+          await client.query('ROLLBACK');
+          res.status(404).json({ error: `Room ${room.room_id} not found` });
+          return;
+        }
+        
+        const available = roomCheck.rows[0].quantity || 0;
+        if (available < room.quantity) {
+          canAutoConfirm = false;
+          await client.query('ROLLBACK');
+          res.status(400).json({ 
+            error: `Insufficient room availability. Requested: ${room.quantity}, Available: ${available}` 
+          });
+          return;
+        }
+      }
     }
 
     // Calculate total amount
@@ -222,6 +259,15 @@ router.post('/', [
     // Generate booking reference
     const bookingReference = `BK${Date.now()}${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
 
+    // Prepare notes with guest info and special requests
+    const guestInfo = `Guest: ${guest_name || 'N/A'} | Email: ${guest_email || 'N/A'} | Phone: ${guest_phone || 'N/A'}`;
+    const fullNotes = special_requests 
+      ? `${guestInfo}\nSpecial Requests: ${special_requests}`
+      : guestInfo;
+
+    // Determine booking status - auto-confirm if rooms are available
+    const bookingStatus = canAutoConfirm ? 'confirmed' : 'pending';
+
     // Create booking with schema-matching fields
     const bookingResult = await client.query(
       `INSERT INTO bookings (
@@ -240,8 +286,8 @@ router.post('/', [
         num_adults + num_children,
         totalPrice,
         'ZAR',
-        special_requests || `Guest: ${guest_name || 'N/A'}, Email: ${guest_email || 'N/A'}, Phone: ${guest_phone || 'N/A'}`,
-        'pending'
+        fullNotes,
+        bookingStatus
       ]
     );
 
@@ -258,13 +304,19 @@ router.post('/', [
 
     await client.query('COMMIT');
 
+    console.log(`Booking ${bookingReference} created with status: ${bookingStatus} (Auto-confirmed: ${canAutoConfirm})`);
+
     res.status(201).json({
       ...booking,
       rooms: roomDetails,
       nights,
       guest_name,
       guest_email,
-      guest_phone
+      guest_phone,
+      auto_confirmed: canAutoConfirm,
+      message: canAutoConfirm 
+        ? 'Booking automatically confirmed - rooms are available!' 
+        : 'Booking pending confirmation'
     });
   } catch (error) {
     await client.query('ROLLBACK');
@@ -339,10 +391,22 @@ router.get('/', authenticateToken, requireAdmin, async (req: AuthRequest, res: R
               a.name as accommodation_name,
               a.city as accommodation_city,
               u.name as user_name,
-              u.email as user_email
+              u.email as user_email,
+              COALESCE(json_agg(
+                DISTINCT jsonb_build_object(
+                  'room_id', r.id,
+                  'room_name', r.name,
+                  'room_type', r.type,
+                  'quantity', bi.quantity,
+                  'price_per_night', bi.price_per_night
+                )
+              ) FILTER (WHERE r.id IS NOT NULL), '[]') as rooms
        FROM bookings b
        JOIN accommodations a ON a.id = b.accommodation_id
        JOIN users u ON u.id = b.user_id
+       LEFT JOIN booking_items bi ON bi.booking_id = b.id
+       LEFT JOIN rooms r ON r.id = bi.room_id
+       GROUP BY b.id, a.name, a.city, u.name, u.email
        ORDER BY b.created_at DESC
        LIMIT $1 OFFSET $2`,
       [limit, offset]

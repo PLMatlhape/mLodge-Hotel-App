@@ -14,6 +14,7 @@ import { toast } from '../../lib/toast';
 interface PaymentFormProps {
   amount: number;
   currency?: string;
+  agreeToTerms?: boolean;
   metadata: {
     bookingId?: string;
     userId?: string;
@@ -27,6 +28,7 @@ interface PaymentFormProps {
 export const PaymentForm: React.FC<PaymentFormProps> = ({
   amount,
   currency = 'ZAR',
+  agreeToTerms = true,
   metadata,
   onPaymentSuccess,
   onPaymentError,
@@ -169,18 +171,35 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
   };
 
   const handlePayment = async () => {
-    switch (selectedPaymentMethod) {
-      case 'credit_card':
-        await handleCreditCardPayment();
-        break;
-      case 'paypal':
-        await handlePayPalPayment();
-        break;
-      case 'bank_transfer':
-        await handleBankTransferPayment();
-        break;
-      default:
-        toast.error('Please select a payment method');
+    // Check if terms are agreed to
+    if (!agreeToTerms) {
+      toast.error('Please agree to the terms and conditions to proceed.');
+      return;
+    }
+
+    // Validate payment method is selected
+    if (!selectedPaymentMethod) {
+      toast.error('Please select a payment method');
+      return;
+    }
+
+    try {
+      switch (selectedPaymentMethod) {
+        case 'credit_card':
+          await handleCreditCardPayment();
+          break;
+        case 'paypal':
+          await handlePayPalPayment();
+          break;
+        case 'bank_transfer':
+          await handleBankTransferPayment();
+          break;
+        default:
+          toast.error('Invalid payment method selected');
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      toast.error('Payment processing failed. Please try again.');
     }
   };
 
@@ -192,6 +211,30 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Security Warning Banner */}
+      <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded">
+        <div className="flex">
+          <div className="flex-shrink-0">
+            <svg
+              className="h-5 w-5 text-amber-500"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </div>
+          <div className="ml-3">
+            <p className="text-sm text-amber-800">
+              <strong>Development Mode:</strong> This is a demo payment form. For production, integrate with a PCI-DSS compliant payment gateway like Stripe, PayPal, or PayFast.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Payment Method Selection */}
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Payment Method</h3>
@@ -235,7 +278,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
 
       {/* Credit Card Form */}
       {selectedPaymentMethod === 'credit_card' && (
-        <div className="space-y-4">
+        <form onSubmit={(e) => { e.preventDefault(); handleCreditCardPayment(); }} className="space-y-4">
           <h3 className="text-lg font-semibold text-gray-900">Card Details</h3>
 
           <div>
@@ -245,6 +288,9 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
             <input
               type="text"
               id="cardNumber"
+              name="cardNumber"
+              autoComplete="cc-number"
+              inputMode="numeric"
               value={cardNumber}
               onChange={(e) => {
                 setCardNumber(paymentService.formatCardNumber(e.target.value));
@@ -272,6 +318,8 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
             <input
               type="text"
               id="cardholderName"
+              name="cardholderName"
+              autoComplete="cc-name"
               value={cardholderName}
               onChange={(e) => {
                 setCardholderName(e.target.value);
@@ -296,6 +344,9 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
               <input
                 type="text"
                 id="expiryDate"
+                name="expiryDate"
+                autoComplete="cc-exp"
+                inputMode="numeric"
                 value={expiryDate}
                 onChange={(e) => {
                   setExpiryDate(paymentService.formatExpiryDate(e.target.value));
@@ -319,6 +370,9 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
               <input
                 type="password"
                 id="cvv"
+                name="cvv"
+                autoComplete="cc-csc"
+                inputMode="numeric"
                 value={cvv}
                 onChange={(e) => {
                   setCvv(e.target.value.replace(/\D/g, ''));
@@ -334,7 +388,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
               {cardErrors.cvv && <p className="text-red-500 text-sm mt-1">{cardErrors.cvv}</p>}
             </div>
           </div>
-        </div>
+        </form>
       )}
 
       {/* Bank Transfer Details */}
@@ -421,7 +475,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
       <button
         type="button"
         onClick={handlePayment}
-        disabled={processing || !selectedPaymentMethod}
+        disabled={processing || !selectedPaymentMethod || !agreeToTerms}
         className="w-full bg-[#0F51AF] text-white py-3 sm:py-4 rounded-lg font-semibold text-base sm:text-lg hover:bg-[#0045b0] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       >
         {processing ? (

@@ -18,7 +18,7 @@ interface Booking {
     email: string;
     phone: string;
   };
-  status: 'pending' | 'confirmed' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'rejected';
   createdAt: string;
 }
 
@@ -58,15 +58,23 @@ export const createBooking = createAsyncThunk(
     num_adults: number;
     num_children?: number;
     special_requests?: string;
-  }) => {
-    const response = await bookingsAPI.create(bookingData);
-    return response.data;
+  }, { rejectWithValue }) => {
+    try {
+      const response = await bookingsAPI.create(bookingData);
+      return response.data;
+    } catch (error: any) {
+      console.error('Booking creation error:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      // Return the actual error from the backend
+      return rejectWithValue(error.response?.data || { error: error.message });
+    }
   }
 );
 
 export const updateBookingStatusAsync = createAsyncThunk(
   'bookings/updateStatus',
-  async ({ id, status }: { id: number; status: 'pending' | 'confirmed' | 'cancelled' }) => {
+  async ({ id, status }: { id: number; status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'rejected' }) => {
     const response = await bookingsAPI.updateStatus(id, status);
     return response.data;
   }
@@ -76,7 +84,10 @@ export const fetchAllBookings = createAsyncThunk(
   'bookings/fetchAllBookings',
   async () => {
     const response = await bookingsAPI.getAll();
-    return response.data;
+    console.log('fetchAllBookings API response:', response.data);
+    // Backend returns { bookings: [...], pagination: {...} }
+    const data: any = response.data;
+    return data.bookings || data;
   }
 );
 

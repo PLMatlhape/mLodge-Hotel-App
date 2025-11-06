@@ -54,12 +54,11 @@ const Register: React.FC = () => {
       
       // Create user object and dispatch to Redux
       const newUser = {
-        id: data.user.id.toString(),
+        id: data.user.id,
         email: data.user.email,
-        firstName: firstname,
-        lastName: lastname,
-        phone: phone,
-        role: 'client' as const,
+        name: data.user.name,
+        phone: data.user.phone || phone,
+        role: 'user' as const,
       };
 
       dispatch(loginSuccess(newUser));
@@ -70,13 +69,21 @@ const Register: React.FC = () => {
       } else {
         navigate('/dashboard');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Registration error:', error);
       // Extract error message from Axios error response
-      const errorMessage = error?.response?.data?.error || 
-                          error?.response?.data?.message || 
-                          error?.message || 
-                          'Registration failed. Please try again.';
+      let errorMessage = 'Registration failed. Please try again.';
+      
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { error?: string; message?: string } }; message?: string };
+        errorMessage = axiosError.response?.data?.error || 
+                      axiosError.response?.data?.message || 
+                      axiosError.message || 
+                      errorMessage;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -124,6 +131,8 @@ const Register: React.FC = () => {
                   <input
                     type="text"
                     id="firstname"
+                    name="firstname"
+                    autoComplete="given-name"
                     value={firstname}
                     onChange={(e) => { setFirstname(e.target.value); setError(null); }}
                     placeholder="Enter Your firstname"
@@ -136,6 +145,8 @@ const Register: React.FC = () => {
                   <input
                     type="text"
                     id="lastname"
+                    name="lastname"
+                    autoComplete="family-name"
                     value={lastname}
                     onChange={(e) => { setLastname(e.target.value); setError(null); }}
                     placeholder="Enter Your lastname"
@@ -150,6 +161,8 @@ const Register: React.FC = () => {
                 <input
                   type="email"
                   id="email"
+                  name="email"
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); setError(null); }}
                   placeholder="Enter Email"
@@ -163,6 +176,8 @@ const Register: React.FC = () => {
                 <input
                   type="tel"
                   id="phone"
+                  name="phone"
+                  autoComplete="tel"
                   value={phone}
                   onChange={(e) => { setPhone(e.target.value); setError(null); }}
                   placeholder="Enter Phone Number"
@@ -177,6 +192,8 @@ const Register: React.FC = () => {
                   <input
                     type="password"
                     id="password"
+                    name="password"
+                    autoComplete="new-password"
                     value={password}
                     onChange={(e) => { setPassword(e.target.value); setError(null); }}
                     placeholder="Enter New Password"
@@ -189,6 +206,8 @@ const Register: React.FC = () => {
                   <input
                     type="password"
                     id="confirmPassword"
+                    name="confirmPassword"
+                    autoComplete="new-password"
                     value={confirmPassword}
                     onChange={(e) => { setConfirmPassword(e.target.value); setError(null); }}
                     placeholder="Confirm Password"

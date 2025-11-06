@@ -1,21 +1,20 @@
 import { useState, useEffect } from 'react';
-import { Search, Edit2, MoreVertical, Loader2, AlertCircle } from 'lucide-react';
+import { Search, XCircle, Loader2, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
-import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { toast } from '../../lib/toast';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { fetchAllBookings, updateBookingStatusAsync } from '../../store/slices/bookingsSlice';
+import { refundsAPI } from '../../services/api';
 import backgroundImage from '../../assets/image/background/Offers-section.jpeg';
 
 // Transform Redux booking to display format
 interface DisplayBooking {
   id: string;
+  dbId: number; // Add database ID for updates
   guest: string;
   email: string;
   room: string;
@@ -35,29 +34,48 @@ export function AdminBookings() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterRoomType, setFilterRoomType] = useState('all');
-  const [selectedBooking, setSelectedBooking] = useState<DisplayBooking | null>(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [cancellingBookingId, setCancellingBookingId] = useState<number | null>(null);
 
   // Fetch bookings on mount
   useEffect(() => {
+    console.log('Fetching all bookings...');
     dispatch(fetchAllBookings());
   }, [dispatch]);
 
+  // Log bookings data when it changes
+  useEffect(() => {
+    console.log('Redux bookings updated:', reduxBookings);
+    console.log('Loading:', loading, 'Error:', error);
+  }, [reduxBookings, loading, error]);
+
   // Transform Redux bookings to display format
   const bookings: DisplayBooking[] = Array.isArray(reduxBookings) 
-    ? reduxBookings.map((booking) => ({
-        id: booking.id,
-        guest: `${booking.guestInfo.firstName} ${booking.guestInfo.lastName}`,
-        email: booking.guestInfo.email,
-        room: booking.roomName,
-        roomType: 'Standard', // Default since Redux doesn't have this field
-        checkIn: booking.checkInDate,
-        checkOut: booking.checkOutDate,
-        nights: booking.nights,
-        amount: booking.totalPrice,
-        status: booking.status.charAt(0).toUpperCase() + booking.status.slice(1), // Capitalize
-        date: booking.createdAt,
-      }))
+    ? reduxBookings.map((booking: any) => {
+        // Handle both backend format and Redux format
+        const bookingRef = booking.booking_reference || booking.id || 'N/A';
+        const dbId = booking.id || 0; // Database ID for updates
+        const guestName = booking.user_name || 
+                         (booking.guestInfo ? `${booking.guestInfo.firstName} ${booking.guestInfo.lastName}` : 'N/A');
+        const guestEmail = booking.user_email || booking.guestInfo?.email || 'N/A';
+        const roomInfo = booking.rooms?.[0] || {};
+        const roomName = booking.accommodation_name || roomInfo.room_name || booking.roomName || 'N/A';
+        const roomType = roomInfo.room_type || 'Standard';
+        
+        return {
+          id: bookingRef,
+          dbId: dbId,
+          guest: guestName,
+          email: guestEmail,
+          room: roomName,
+          roomType: roomType,
+          checkIn: booking.check_in_date || booking.checkInDate || 'N/A',
+          checkOut: booking.check_out_date || booking.checkOutDate || 'N/A',
+          nights: booking.nights || 1,
+          amount: booking.total_price || booking.totalPrice || 0,
+          status: booking.status ? booking.status.charAt(0).toUpperCase() + booking.status.slice(1) : 'Pending',
+          date: booking.created_at || booking.createdAt || new Date().toISOString(),
+        };
+      })
     : [];
 
   const filteredBookings = bookings.filter(booking => {
@@ -72,26 +90,38 @@ export function AdminBookings() {
     return matchesSearch && matchesStatus && matchesRoomType;
   });
 
-  const handleEditBooking = (booking: DisplayBooking) => {
-    setSelectedBooking(booking);
-    setIsEditDialogOpen(true);
-  };
+  const handleCancelAndRefund = async (bookingDbId: number, bookingRef: string, amount: number) => {
+    if (!confirm(`Are you sure you want to cancel booking ${bookingRef} and process a refund of R ${amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}?`)) {
+      return;
+    }
 
-  const handleUpdateStatus = async (bookingId: string, newStatus: string) => {
+    setCancellingBookingId(bookingDbId);
+    
     try {
-      // Parse the ID - Redux uses string IDs directly
+      // 1. Update booking status to cancelled
       await dispatch(
         updateBookingStatusAsync({
-          id: parseInt(bookingId),
-          status: newStatus.toLowerCase() as 'pending' | 'confirmed' | 'cancelled',
+          id: bookingDbId,
+          status: 'cancelled',
         })
       ).unwrap();
-      toast.success('Booking status updated successfully');
-      // Refresh bookings list
+
+      // 2. Create refund record in the database
+      await refundsAPI.create({
+        booking_id: bookingDbId,
+        reason: 'Cancelled by admin',
+        refund_amount: amount,
+      });
+      
+      toast.success(`Booking ${bookingRef} cancelled. Refund of R ${amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 })} has been created and is pending approval.`);
+      
+      // 3. Refresh bookings list
       dispatch(fetchAllBookings());
     } catch (error) {
-      toast.error('Failed to update booking status');
-      console.error('Error updating booking status:', error);
+      toast.error('Failed to cancel booking and process refund');
+      console.error('Error cancelling booking:', error);
+    } finally {
+      setCancellingBookingId(null);
     }
   };
 
@@ -247,130 +277,117 @@ export function AdminBookings() {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-max table-auto">
               <thead>
                 <tr className="border-b" style={{ borderColor: 'rgba(0, 28, 67, 0.2)' }}>
-                  <th className="text-left py-3 px-4" style={{ color: '#627182' }}>Reference</th>
-                  <th className="text-left py-3 px-4" style={{ color: '#627182' }}>Guest</th>
-                  <th className="text-left py-3 px-4" style={{ color: '#627182' }}>Room</th>
-                  <th className="text-left py-3 px-4" style={{ color: '#627182' }}>Check-in</th>
-                  <th className="text-left py-3 px-4" style={{ color: '#627182' }}>Nights</th>
-                  <th className="text-left py-3 px-4" style={{ color: '#627182' }}>Amount</th>
-                  <th className="text-left py-3 px-4" style={{ color: '#627182' }}>Status</th>
-                  <th className="text-left py-3 px-4" style={{ color: '#627182' }}>Actions</th>
+                  <th className="text-left py-3 px-3 whitespace-nowrap" style={{ color: '#627182', minWidth: '180px' }}>Reference</th>
+                  <th className="text-left py-3 px-3 whitespace-nowrap" style={{ color: '#627182', minWidth: '200px' }}>Guest</th>
+                  <th className="text-left py-3 px-3 whitespace-nowrap" style={{ color: '#627182', minWidth: '220px' }}>Room</th>
+                  <th className="text-left py-3 px-3 whitespace-nowrap" style={{ color: '#627182', minWidth: '110px' }}>Check-in</th>
+                  <th className="text-left py-3 px-3 whitespace-nowrap" style={{ color: '#627182', minWidth: '110px' }}>Check-out</th>
+                  <th className="text-left py-3 px-3 whitespace-nowrap" style={{ color: '#627182', minWidth: '80px' }}>Nights</th>
+                  <th className="text-left py-3 px-3 whitespace-nowrap" style={{ color: '#627182', minWidth: '120px' }}>Amount</th>
+                  <th className="text-left py-3 px-3 whitespace-nowrap" style={{ color: '#627182', minWidth: '100px' }}>Status</th>
+                  <th className="text-left py-3 px-3 whitespace-nowrap" style={{ color: '#627182', minWidth: '120px' }}>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredBookings.map((booking) => {
                   const statusColor = getStatusColor(booking.status);
+                  const isCancelled = booking.status.toLowerCase() === 'cancelled';
+                  const isLoading = cancellingBookingId === booking.dbId;
+                  
                   return (
-                    <tr key={booking.id} className="border-b hover:bg-white/50" style={{ borderColor: 'rgba(0, 28, 67, 0.1)' }}>
-                      <td className="py-3 px-4" style={{ color: '#000000' }}>{booking.id}</td>
-                      <td className="py-3 px-4">
+                    <tr key={booking.id} className="border-b hover:bg-white/50 transition-colors" style={{ borderColor: 'rgba(0, 28, 67, 0.1)' }}>
+                      <td className="py-3 px-3 whitespace-nowrap" style={{ color: '#000000', fontSize: '0.875rem' }}>
+                        {booking.id}
+                      </td>
+                      <td className="py-3 px-3">
                         <div>
-                          <div style={{ color: '#000000' }}>{booking.guest}</div>
-                          <div style={{ color: '#627182', fontSize: '0.875rem' }}>{booking.email}</div>
+                          <div style={{ color: '#000000', fontWeight: '500', fontSize: '0.875rem' }}>{booking.guest}</div>
+                          <div style={{ color: '#627182', fontSize: '0.75rem' }}>{booking.email}</div>
                         </div>
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-3">
                         <div>
-                          <div style={{ color: '#000000' }}>{booking.room}</div>
-                          <div style={{ color: '#627182', fontSize: '0.875rem' }}>{booking.roomType}</div>
+                          <div style={{ color: '#000000', fontWeight: '500', fontSize: '0.875rem' }}>{booking.room}</div>
+                          <div style={{ color: '#627182', fontSize: '0.75rem' }}>{booking.roomType}</div>
                         </div>
                       </td>
-                      <td className="py-3 px-4" style={{ color: '#627182' }}>{booking.checkIn}</td>
-                      <td className="py-3 px-4" style={{ color: '#000000' }}>{booking.nights}</td>
-                      <td className="py-3 px-4" style={{ color: '#000000' }}>R {booking.amount.toLocaleString()}</td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-3 whitespace-nowrap" style={{ color: '#627182', fontSize: '0.875rem' }}>
+                        {new Date(booking.checkIn).toLocaleDateString()}
+                      </td>
+                      <td className="py-3 px-3 whitespace-nowrap" style={{ color: '#627182', fontSize: '0.875rem' }}>
+                        {new Date(booking.checkOut).toLocaleDateString()}
+                      </td>
+                      <td className="py-3 px-3 text-center" style={{ color: '#000000', fontSize: '0.875rem' }}>
+                        {booking.nights}
+                      </td>
+                      <td className="py-3 px-3 whitespace-nowrap" style={{ color: '#000000', fontWeight: '500', fontSize: '0.875rem' }}>
+                        R {booking.amount.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-3 px-3">
                         <Badge
                           style={{
                             backgroundColor: statusColor.bg,
                             color: statusColor.text,
+                            fontSize: '0.75rem',
+                            padding: '4px 8px',
                           }}
                         >
                           {booking.status}
                         </Badge>
                       </td>
-                      <td className="py-3 px-4">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" style={{ color: '#0F51AF' }} />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent style={{ backgroundColor: '#D9D9D9', borderColor: 'rgba(0, 28, 67, 0.2)' }}>
-                            <DropdownMenuItem onClick={() => handleEditBooking(booking)} style={{ color: '#000000' }}>
-                              <Edit2 className="h-4 w-4 mr-2" />
-                              Edit Details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleUpdateStatus(booking.id, 'Confirmed')} style={{ color: '#000000' }}>
-                              Confirm Booking
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleUpdateStatus(booking.id, 'Checked-in')} style={{ color: '#000000' }}>
-                              Check-in
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleUpdateStatus(booking.id, 'Completed')} style={{ color: '#000000' }}>
-                              Complete
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleUpdateStatus(booking.id, 'Cancelled')} style={{ color: '#000000' }}>
-                              Cancel
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                      <td className="py-3 px-3">
+                        {!isCancelled ? (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            disabled={isLoading}
+                            onClick={() => handleCancelAndRefund(booking.dbId, booking.id, booking.amount)}
+                            className="text-xs"
+                            style={{
+                              backgroundColor: isLoading ? '#94a3b8' : '#dc2626',
+                              color: '#FFFFFF',
+                              padding: '6px 12px',
+                            }}
+                          >
+                            {isLoading ? (
+                              <>
+                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                Cancelling...
+                              </>
+                            ) : (
+                              'Cancel & Refund'
+                            )}
+                          </Button>
+                        ) : (
+                          <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>Cancelled</span>
+                        )}
                       </td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
+            
+            {/* Empty State */}
+            {filteredBookings.length === 0 && (
+              <div className="text-center py-12">
+                <AlertCircle className="mx-auto h-12 w-12 mb-4" style={{ color: '#627182' }} />
+                <h3 style={{ color: '#000000', fontSize: '1.125rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  No bookings found
+                </h3>
+                <p style={{ color: '#627182', fontSize: '0.875rem' }}>
+                  {searchTerm || filterStatus !== 'all' || filterRoomType !== 'all'
+                    ? 'Try adjusting your search or filters'
+                    : 'No bookings have been made yet'}
+                </p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
-
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent style={{ backgroundColor: '#D9D9D9', borderColor: 'rgba(0, 28, 67, 0.2)' }}>
-          <DialogHeader>
-            <DialogTitle style={{ color: '#000000' }}>Edit Booking Details</DialogTitle>
-          </DialogHeader>
-          {selectedBooking && (
-            <div className="space-y-4">
-              <div>
-                <Label style={{ color: '#000000' }}>Guest Name</Label>
-                <Input
-                  value={selectedBooking.guest}
-                  style={{ backgroundColor: '#FFFFFF', borderColor: 'rgba(0, 28, 67, 0.2)', color: '#000000' }}
-                />
-              </div>
-              <div>
-                <Label style={{ color: '#000000' }}>Check-in Date</Label>
-                <Input
-                  type="date"
-                  value={selectedBooking.checkIn}
-                  style={{ backgroundColor: '#FFFFFF', borderColor: 'rgba(0, 28, 67, 0.2)', color: '#000000' }}
-                />
-              </div>
-              <div>
-                <Label style={{ color: '#000000' }}>Check-out Date</Label>
-                <Input
-                  type="date"
-                  value={selectedBooking.checkOut}
-                  style={{ backgroundColor: '#FFFFFF', borderColor: 'rgba(0, 28, 67, 0.2)', color: '#000000' }}
-                />
-              </div>
-              <Button
-                onClick={() => {
-                  toast.success('Booking updated successfully');
-                  setIsEditDialogOpen(false);
-                }}
-                style={{ backgroundColor: '#0F51AF', color: '#FFFFFF' }}
-              >
-                Save Changes
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
       </div>
     </div>
   );

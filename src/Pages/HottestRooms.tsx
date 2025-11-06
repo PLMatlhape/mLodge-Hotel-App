@@ -48,7 +48,17 @@ const HottestRooms: React.FC<HottestRoomsProps> = ({ onRoomClick }) => {
   }, [dispatch]);
 
   // Transform Redux rooms to match the Room interface
-  const rooms: Room[] = reduxRooms.map((room) => {
+  // Only show available rooms with photos on client side
+  const rooms: Room[] = reduxRooms
+    .filter((room) => {
+      const roomData = room as unknown as Record<string, unknown>;
+      const photos = (roomData.photos as Array<{ url: string; is_primary: boolean }>) || [];
+      const status = roomData.status as string;
+      
+      // Only show rooms that are available and have at least one photo
+      return status === 'available' && photos.length > 0;
+    })
+    .map((room) => {
     const roomData = room as unknown as Record<string, unknown>;
     const photos = (roomData.photos as Array<{ url: string; is_primary: boolean }>) || [];
     const firstPhoto = photos[0]?.url || '';

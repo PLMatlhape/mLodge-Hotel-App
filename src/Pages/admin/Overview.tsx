@@ -13,7 +13,7 @@ import {
 
 export function AdminOverview() {
   const dispatch = useAppDispatch();
-  const { dashboardStats, bookingTrends, revenueTrends, recentBookings, loading, error } = useAppSelector(
+  const { dashboardStats, bookingTrends, recentBookings, loading, error } = useAppSelector(
     (state) => state.analytics
   );
 

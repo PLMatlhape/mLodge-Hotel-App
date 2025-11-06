@@ -87,13 +87,21 @@ export interface Room {
   accommodation_id: number;
   name: string;
   description?: string;
+  location?: string;
+  type?: string;
   capacity: number;
   beds: number;
+  baths?: number;
+  area?: number;
   price_per_night: number;
   refundable: boolean;
   quantity?: number;
   available_quantity?: number;
-  photos?: { url: string; is_primary: boolean }[];
+  photos?: { url: string; sort_order?: number; is_primary?: boolean }[];
+  amenities?: string[];
+  roomFeatures?: string[];
+  room_features?: string[];
+  status?: string;
 }
 
 export interface Booking {
@@ -227,7 +235,7 @@ export const bookingsAPI = {
 // Reviews API
 export const reviewsAPI = {
   getByAccommodation: (accommodationId: number, params?: { page?: number; limit?: number }) => 
-    api.get<{ reviews: Review[]; pagination: any }>(`/reviews/accommodation/${accommodationId}`, { params }),
+    api.get<{ reviews: Review[]; pagination: { page: number; limit: number; total: number; pages: number } }>(`/reviews/accommodation/${accommodationId}`, { params }),
   
   getMyReviews: () => 
     api.get<Review[]>('/reviews/my-reviews'),
@@ -328,7 +336,7 @@ export const adminAPI = {
   getAuditLogs: (page?: number, limit?: number) => 
     api.get('/admin/audit-logs', { params: { page, limit } }),
   
-  logAction: (data: { action: string; entity_type: string; entity_id: number; changes: any }) => 
+  logAction: (data: { action: string; entity_type: string; entity_id: number; changes: Record<string, unknown> }) => 
     api.post('/admin/audit-logs', data),
   
   getOccupancyRate: (startDate?: string, endDate?: string) => 
@@ -339,6 +347,27 @@ export const adminAPI = {
   
   getHealth: () => 
     api.get('/admin/health'),
+};
+
+// Refunds API
+export const refundsAPI = {
+  getAll: (params?: { page?: number; limit?: number; status?: string }) => 
+    api.get('/refunds', { params }),
+  
+  getById: (id: number) => 
+    api.get(`/refunds/${id}`),
+  
+  create: (data: { booking_id: number; reason: string; refund_amount?: number }) => 
+    api.post('/refunds', data),
+  
+  approve: (id: number, adminNotes?: string) => 
+    api.patch(`/refunds/${id}/approve`, { admin_notes: adminNotes }),
+  
+  reject: (id: number, adminNotes: string) => 
+    api.patch(`/refunds/${id}/reject`, { admin_notes: adminNotes }),
+  
+  process: (id: number, transactionId?: string) => 
+    api.patch(`/refunds/${id}/process`, { transaction_id: transactionId }),
 };
 
 export default api;

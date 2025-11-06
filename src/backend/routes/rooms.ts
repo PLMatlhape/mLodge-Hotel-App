@@ -10,16 +10,21 @@ router.get('/', [
   optionalAuth
 ], async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    // Check if this is an admin request or client request
+    const isAdmin = req.user?.role === 'admin';
+    
     const queryText = `
       SELECT r.*,
              a.name as accommodation_name,
+             a.city as accommodation_city,
              COALESCE(json_agg(
                DISTINCT jsonb_build_object('url', p.url, 'sort_order', p.sort_order)
              ) FILTER (WHERE p.id IS NOT NULL), '[]') as photos
       FROM rooms r
       LEFT JOIN accommodations a ON a.id = r.accommodation_id
       LEFT JOIN room_photos p ON p.room_id = r.id
-      GROUP BY r.id, a.name
+      ${!isAdmin ? "WHERE r.status = 'available'" : ''}
+      GROUP BY r.id, a.name, a.city
       ORDER BY r.id DESC
     `;
 
@@ -157,6 +162,8 @@ router.post('/', [
   body('type').optional().trim(),
   body('price_per_night').isFloat({ min: 0 }),
   body('refundable').optional().isBoolean(),
+  body('quantity').optional().isInt({ min: 1 }),
+  body('status').optional().isIn(['available', 'unavailable', 'maintenance']),
   body('amenities').optional().isArray(),
   body('roomFeatures').optional().isArray(),
   body('images').optional().isArray()
@@ -180,16 +187,18 @@ router.post('/', [
       area = 120,
       price_per_night,
       refundable = true,
+      quantity = 10,
+      status = 'available',
       amenities = [],
       roomFeatures = [],
       images = []
     } = req.body;
 
     const result = await db.query(
-      `INSERT INTO rooms (accommodation_id, name, location, description, type, capacity, beds, baths, area, price_per_night, refundable, amenities, room_features)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      `INSERT INTO rooms (accommodation_id, name, location, description, type, capacity, beds, baths, area, price_per_night, refundable, quantity, status, amenities, room_features)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
        RETURNING *`,
-      [accommodation_id, name, location, description, type, capacity, beds, baths, area, price_per_night, refundable, JSON.stringify(amenities), JSON.stringify(roomFeatures)]
+      [accommodation_id, name, location, description, type, capacity, beds, baths, area, price_per_night, refundable, quantity, status, JSON.stringify(amenities), JSON.stringify(roomFeatures)]
     );
 
     const room = result.rows[0];
@@ -234,6 +243,8 @@ router.put('/:id', [
   body('beds').optional().isInt({ min: 1 }),
   body('price_per_night').optional().isFloat({ min: 0 }),
   body('refundable').optional().isBoolean(),
+  body('quantity').optional().isInt({ min: 1 }),
+  body('status').optional().isIn(['available', 'unavailable', 'maintenance']),
   body('images').optional().isArray()
 ], async (req: AuthRequest, res: Response): Promise<void> => {
   const client = await db.getClient();
@@ -265,9 +276,10 @@ router.put('/:id', [
            refundable = COALESCE($10, refundable),
            amenities = COALESCE($11, amenities),
            room_features = COALESCE($12, room_features),
-           status = COALESCE($13, status),
+           quantity = COALESCE($13, quantity),
+           status = COALESCE($14, status),
            updated_at = NOW()
-       WHERE id = $14
+       WHERE id = $15
        RETURNING *`,
       [
         updates.name,
@@ -282,6 +294,7 @@ router.put('/:id', [
         updates.refundable,
         updates.amenities ? JSON.stringify(updates.amenities) : null,
         updates.roomFeatures ? JSON.stringify(updates.roomFeatures) : null,
+        updates.quantity,
         updates.status,
         id
       ]
@@ -315,7 +328,7 @@ router.put('/:id', [
         for (let i = 0; i < validImages.length; i++) {
           await client.query(
             'INSERT INTO room_photos (room_id, url, sort_order) VALUES ($1, $2, $3)',
-            [id, validImages[i], i === 0]
+            [id, validImages[i], i]
           );
         }
         console.log(`Inserted ${validImages.length} new photos for room ${id}`);
@@ -388,11 +401,11 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req: AuthRequest, 
     await db.query('DELETE FROM rooms WHERE id = $1', [id]);
 
     res.json({ message: 'Room deleted successfully', id: parseInt(id) });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error deleting room:', error);
     
     // Handle foreign key constraint errors
-    if (error.code === '23503') {
+    if (error && typeof error === 'object' && 'code' in error && error.code === '23503') {
       res.status(409).json({ 
         error: 'Cannot delete room because it is referenced by other records' 
       });

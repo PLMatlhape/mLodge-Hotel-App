@@ -33,12 +33,11 @@ const Login: React.FC = () => {
       
       // Dispatch login success with user data
       const user = {
-        id: data.user.id.toString(),
+        id: data.user.id,
         email: data.user.email,
-        firstName: data.user.name.split(' ')[0] || 'User',
-        lastName: data.user.name.split(' ')[1] || '',
+        name: data.user.name,
         phone: data.user.phone || '',
-        role: data.user.role as 'admin' | 'client',
+        role: data.user.role as 'admin' | 'user',
       };
       
       dispatch(loginSuccess(user));
@@ -120,6 +119,8 @@ const Login: React.FC = () => {
                 <input
                   type="text"
                   id="username"
+                  name="username"
+                  autoComplete="username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Enter Your username"
@@ -136,6 +137,8 @@ const Login: React.FC = () => {
                 <input
                   type="password"
                   id="password"
+                  name="password"
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter New Password"

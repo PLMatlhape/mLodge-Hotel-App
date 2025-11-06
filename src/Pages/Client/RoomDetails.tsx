@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppSelector } from '../../store/hooks';
+import { toast } from '../../lib/toast';
 import starIcon from '../../assets/icons/yellow-star-rate-icon.png';
 import heartIcon from '../../assets/icons/yellow-heart-icon.png';
 import bathIcon from '../../assets/icons/black/black-bath-icon.png';
@@ -23,6 +24,7 @@ interface RoomDetailsProps {
     id: number;
     accommodation_id?: number;
     name: string;
+    description?: string;
     location?: string;
     beds: number;
     baths?: number;
@@ -34,10 +36,13 @@ interface RoomDetailsProps {
     rating?: number;
     image: string;
     images?: string[];
-    photos?: Array<{ url: string; is_primary: boolean }>;
+    photos?: Array<{ url: string; sort_order?: number }>;
     badge: string;
     type?: string;
     favorite?: boolean;
+    amenities?: string[];
+    roomFeatures?: string[];
+    room_features?: string[];
   };
   onClose: () => void;
 }
@@ -66,7 +71,8 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
   );
   
   // Get price - use price_per_night if available, otherwise price
-  const roomPrice = room.price_per_night || room.price;
+  // Ensure it's always a number
+  const roomPrice = Number(room.price_per_night || room.price || 0);
 
   // Handle image swap
   const handleImageSwap = (clickedIndex: number) => {
@@ -105,7 +111,8 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
   const serviceFee = 350;
   const totalPrice = roomPrice * nights + serviceFee;
 
-  const amenities = [
+  // Use room amenities if available, otherwise use defaults
+  const defaultAmenities = [
     { icon: wifiIcon, name: 'Free High-Speed Wi-Fi' },
     { icon: carIcon, name: 'Complimentary Parking' },
     { icon: breakfastIcon, name: 'Breakfast Included' },
@@ -115,7 +122,36 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
     { icon: teaIcon, name: 'Room Service' }
   ];
 
-  const roomFeatures = [
+  // Map amenity names to icons
+  const amenityIconMap: { [key: string]: string } = {
+    'Free High-Speed Wi-Fi': wifiIcon,
+    'Wi-Fi': wifiIcon,
+    'WiFi': wifiIcon,
+    'Complimentary Parking': carIcon,
+    'Parking': carIcon,
+    'Breakfast Included': breakfastIcon,
+    'Breakfast': breakfastIcon,
+    '65" Smart TV': tvIcon,
+    'Smart TV': tvIcon,
+    'TV': tvIcon,
+    'Climate Control': airIcon,
+    'Air Conditioning': airIcon,
+    'AC': airIcon,
+    '24/7 Security': securityIcon,
+    'Security': securityIcon,
+    'Room Service': teaIcon,
+    'Minibar': teaIcon
+  };
+
+  const amenities = room.amenities && room.amenities.length > 0
+    ? room.amenities.map(name => ({
+        icon: amenityIconMap[name] || wifiIcon, // Use matching icon or default to wifi
+        name
+      }))
+    : defaultAmenities;
+
+  // Use room features if available, otherwise use defaults
+  const defaultRoomFeatures = [
     'King-size beds with premium linens',
     'Marble bathroom with jacuzzi',
     'Minibar and Nespresso machine',
@@ -126,20 +162,51 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
     'In-room safe'
   ];
 
+  const roomFeatures = (room.roomFeatures || room.room_features || []).length > 0
+    ? (room.roomFeatures || room.room_features || [])
+    : defaultRoomFeatures;
+
   const handleBookNow = () => {
+    console.log('Book Now clicked', { checkInDate, checkOutDate, isAuthenticated });
+    
+    // Check authentication first
+    if (!isAuthenticated) {
+      console.log('User not authenticated, redirecting to login');
+      toast.error('Please login to book a room');
+      navigate('/login');
+      return;
+    }
+
     // Validate dates before booking
     if (!checkInDate || !checkOutDate) {
-      alert('Please select check-in and check-out dates');
+      console.log('Dates not selected');
+      toast.error('Please select check-in and check-out dates');
       return;
     }
 
     const checkIn = new Date(checkInDate);
     const checkOut = new Date(checkOutDate);
 
+    console.log('Dates:', { checkIn, checkOut });
+
     if (checkOut <= checkIn) {
-      alert('Check-out date must be after check-in date');
+      console.log('Invalid date range');
+      toast.error('Check-out date must be after check-in date');
       return;
     }
+
+    // Calculate nights
+    const nights = calculateNights();
+    
+    // Ensure roomPrice is a valid number
+    const validRoomPrice = Number(roomPrice);
+    if (isNaN(validRoomPrice) || validRoomPrice <= 0) {
+      console.error('Invalid room price:', roomPrice);
+      toast.error('Unable to process booking. Invalid room price.');
+      return;
+    }
+
+    console.log('Room price:', validRoomPrice, 'Type:', typeof validRoomPrice);
 
     // Format dates for display
     const formatDate = (date: Date) => {
@@ -150,12 +217,14 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
       });
     };
 
-    // Navigate to booking page with all parameters
+    // Store image data in sessionStorage to avoid URL length limit
+    sessionStorage.setItem('bookingRoomImage', firstImage);
+    
+    // Navigate to booking page with all parameters (excluding large image data)
     const params = new URLSearchParams({
       roomId: room.id.toString(),
       accommodationId: (room.accommodation_id || 0).toString(),
       roomName: room.name,
-      roomImage: firstImage,
       roomBadge: room.badge,
       location: room.location || 'Location Not Specified',
       beds: room.beds.toString(),
@@ -167,10 +236,21 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
       checkInDate: formatDate(checkIn),
       checkOutDate: formatDate(checkOut),
       nights: nights.toString(),
-      pricePerNight: roomPrice.toFixed(2)
+      pricePerNight: validRoomPrice.toFixed(2)
     });
 
-    navigate(`/book?${params.toString()}`);
+    const bookingUrl = `/book?${params.toString()}`;
+    console.log('Navigating to:', bookingUrl);
+    console.log('Booking data:', {
+      roomId: room.id,
+      accommodationId: room.accommodation_id,
+      checkIn: formatDate(checkIn),
+      checkOut: formatDate(checkOut),
+      nights,
+      price: validRoomPrice
+    });
+    
+    navigate(bookingUrl);
   };
 
   return (
@@ -254,7 +334,7 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
                 {/* Location */}
                 <div className="flex items-center gap-2 text-gray-600 mb-6">
                   <img src={locationIcon} alt="Location" className="w-5 h-5" />
-                  <span>45 Loop Street Cape Town City Centre Cape Town, 8001 South Africa</span>
+                  <span>{room.location || '45 Loop Street Cape Town City Centre Cape Town, 8001 South Africa'}</span>
                 </div>
 
                 {/* Room Stats */}
@@ -284,7 +364,7 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">Description</h2>
                 <p className="text-gray-700 leading-relaxed">
-                  Experience the ultimate in luxury with our Presidential Suite. This expansive accommodation features stunning panoramic city views, a private terrace, and a sophisticated design that combines modern elegance with timeless comfort. Perfect for those seeking the finest hospitality experience.
+                  {room.description || 'Experience the ultimate in luxury with our Presidential Suite. This expansive accommodation features stunning panoramic city views, a private terrace, and a sophisticated design that combines modern elegance with timeless comfort. Perfect for those seeking the finest hospitality experience.'}
                 </p>
               </div>
 
@@ -401,9 +481,14 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
 
                 {/* Book Button */}
                 <button
-                  onClick={handleBookNow}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleBookNow();
+                  }}
                   disabled={!checkInDate || !checkOutDate}
-                  className="w-full bg-[#0F51AF] text-white py-4 rounded-lg font-bold text-lg hover:bg-[#0d4291] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-[#0F51AF] text-white py-4 rounded-lg font-bold text-lg hover:bg-[#0d4291] active:bg-[#0a3678] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Book Now
                 </button>
