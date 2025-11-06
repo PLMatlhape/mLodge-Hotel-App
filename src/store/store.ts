@@ -12,6 +12,7 @@ import inquiriesReducer from './slices/inquiriesSlice';
 import emailTemplatesReducer from './slices/emailTemplatesSlice';
 import auditLogsReducer from './slices/auditLogsSlice';
 import reportsReducer from './slices/reportsSlice';
+import favouritesReducer from './slices/favouritesSlice';
 
 export const store = configureStore({
   reducer: {
@@ -28,6 +29,7 @@ export const store = configureStore({
     emailTemplates: emailTemplatesReducer,
     auditLogs: auditLogsReducer,
     reports: reportsReducer,
+    favourites: favouritesReducer,
   },
 });
 
