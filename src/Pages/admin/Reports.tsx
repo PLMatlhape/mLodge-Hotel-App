@@ -35,12 +35,13 @@ export function AdminReports() {
 
   const handleGenerateReport = async () => {
     try {
-      await dispatch(generateReport({
+      const result = await dispatch(generateReport({
         type: reportType,
         period: timePeriod,
         format: format,
       })).unwrap();
-      toast.success('Report generated successfully');
+      toast.success('Report generation started successfully');
+      // Refresh reports list to show the new report
       dispatch(fetchReports());
     } catch (error) {
       toast.error('Failed to generate report');
@@ -226,7 +227,7 @@ export function AdminReports() {
                         </span>
                       </td>
                       <td className="py-2 sm:py-3 px-3 sm:px-4 text-gray-text text-xs sm:text-sm">
-                        {new Date(report.created_at).toLocaleDateString()}
+                        {new Date(report.created_at || report.generated_at).toLocaleDateString()}
                       </td>
                       <td className="py-2 sm:py-3 px-3 sm:px-4">
                         <Button

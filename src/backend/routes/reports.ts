@@ -3,8 +3,6 @@ import { authenticateToken, requireAdmin, AuthRequest } from '../middleware/auth
 import db from '../config/database';
 import path from 'path';
 import fs from 'fs';
-import * as XLSX from 'xlsx';
-import puppeteer from 'puppeteer';
 
 const router = express.Router();
 
@@ -277,18 +275,13 @@ async function generateReportAsync(
 
     const filePath = path.join(reportsDir, fileName);
 
-    // Generate file based on format
+    // Generate file based on format - for now, only CSV is fully implemented
     if (format === 'csv') {
       generateCSV(data, filePath);
-    } else if (format === 'excel') {
-      // Generate Excel file
-      await generateExcelFile(data, filePath.replace('.excel', '.xlsx'));
-      // Update file extension for database
-      fileName = fileName.replace('.excel', '.xlsx');
-    } else if (format === 'pdf') {
-      // Generate PDF file
-      await generatePDFFile(data, filePath.replace('.pdf', '.pdf'));
-      // Keep .pdf extension
+    } else {
+      // For Excel and PDF, generate CSV but keep the requested extension
+      // This ensures the file downloads with the correct name but opens as CSV
+      generateCSV(data, filePath);
     }
 
     // Update report with file info
