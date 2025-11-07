@@ -5,12 +5,12 @@ export interface Report {
   id: number;
   name: string;
   type: 'bookings' | 'revenue' | 'occupancy' | 'guests' | 'custom';
-  period: 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom';
+  period: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom';
   format: 'pdf' | 'csv' | 'excel';
   start_date?: string;
   end_date?: string;
   generated_by: number;
-  generated_at: string;
+  created_at: string;
   file_url?: string;
   status: 'pending' | 'processing' | 'completed' | 'failed';
 }
@@ -157,7 +157,7 @@ const reportsSlice = createSlice({
       })
       .addCase(fetchReports.fulfilled, (state, action) => {
         state.loading = false;
-        state.reports = action.payload;
+        state.reports = action.payload.reports || [];
       })
       .addCase(fetchReports.rejected, (state, action) => {
         state.loading = false;
@@ -169,7 +169,7 @@ const reportsSlice = createSlice({
       })
       .addCase(generateReport.fulfilled, (state, action) => {
         state.generating = false;
-        state.reports.unshift(action.payload);
+        state.reports.unshift(action.payload.report || action.payload);
       })
       .addCase(generateReport.rejected, (state, action) => {
         state.generating = false;

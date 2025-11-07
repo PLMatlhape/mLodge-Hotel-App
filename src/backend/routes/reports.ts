@@ -3,6 +3,8 @@ import { authenticateToken, requireAdmin, AuthRequest } from '../middleware/auth
 import db from '../config/database';
 import path from 'path';
 import fs from 'fs';
+import * as XLSX from 'xlsx';
+import puppeteer from 'puppeteer';
 
 const router = express.Router();
 
@@ -140,14 +142,28 @@ router.get('/:id/download', authenticateToken, requireAdmin, async (req: AuthReq
       return;
     }
 
-    const filePath = path.join(__dirname, '../../', report.file_path);
+    const filePath = path.join(process.cwd(), report.file_path);
 
     if (!fs.existsSync(filePath)) {
       res.status(404).json({ error: 'Report file does not exist' });
       return;
     }
 
-    res.download(filePath, report.file_name);
+    // Set proper headers for CSV download
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${report.file_name}"`);
+
+    // Read file and send as stream to ensure proper encoding
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
+
+    // Handle stream errors
+    fileStream.on('error', (error) => {
+      console.error('Error streaming file:', error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Failed to stream file' });
+      }
+    });
   } catch (error) {
     console.error('Error downloading report:', error);
     res.status(500).json({ error: 'Failed to download report' });
@@ -188,7 +204,7 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req: AuthRequest, 
     );
 
     if (reportResult.rows.length > 0 && reportResult.rows[0].file_path) {
-      const filePath = path.join(__dirname, '../../', reportResult.rows[0].file_path);
+      const filePath = path.join(process.cwd(), reportResult.rows[0].file_path);
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }
@@ -254,7 +270,7 @@ async function generateReportAsync(
     }
 
     // Create reports directory if it doesn't exist
-    const reportsDir = path.join(__dirname, '../../reports');
+    const reportsDir = path.join(process.cwd(), 'reports');
     if (!fs.existsSync(reportsDir)) {
       fs.mkdirSync(reportsDir, { recursive: true });
     }
@@ -265,11 +281,14 @@ async function generateReportAsync(
     if (format === 'csv') {
       generateCSV(data, filePath);
     } else if (format === 'excel') {
-      // TODO: Implement Excel generation
-      generateCSV(data, filePath.replace('.excel', '.csv'));
+      // Generate Excel file
+      await generateExcelFile(data, filePath.replace('.excel', '.xlsx'));
+      // Update file extension for database
+      fileName = fileName.replace('.excel', '.xlsx');
     } else if (format === 'pdf') {
-      // TODO: Implement PDF generation
-      generateCSV(data, filePath.replace('.pdf', '.csv'));
+      // Generate PDF file
+      await generatePDFFile(data, filePath.replace('.pdf', '.pdf'));
+      // Keep .pdf extension
     }
 
     // Update report with file info
@@ -350,17 +369,32 @@ async function generateRevenueReport(date_from: string | null, date_to: string |
 }
 
 async function generateOccupancyReport(date_from: string | null, date_to: string | null, filters: Record<string, unknown>) {
-  const query = `
+  let query = `
     SELECT acc.name as accommodation_name,
            COUNT(b.id) as total_bookings,
            SUM(EXTRACT(DAY FROM (b.check_out_date - b.check_in_date))) as total_nights
     FROM accommodations acc
     LEFT JOIN bookings b ON acc.id = b.accommodation_id
-    GROUP BY acc.id, acc.name
-    ORDER BY total_bookings DESC
+    WHERE 1=1
   `;
+  const params: (string | number)[] = [];
+  let paramIndex = 1;
 
-  const result = await db.query(query);
+  if (date_from) {
+    query += ` AND b.check_in_date >= $${paramIndex}`;
+    params.push(date_from);
+    paramIndex++;
+  }
+
+  if (date_to) {
+    query += ` AND b.check_out_date <= $${paramIndex}`;
+    params.push(date_to);
+    paramIndex++;
+  }
+
+  query += ' GROUP BY acc.id, acc.name ORDER BY total_bookings DESC';
+
+  const result = await db.query(query, params);
   return result.rows;
 }
 
@@ -396,19 +430,32 @@ async function generateGuestsReport(date_from: string | null, date_to: string | 
 
 function generateCSV(data: unknown[], filePath: string) {
   if (data.length === 0) {
-    fs.writeFileSync(filePath, 'No data available');
+    // Add BOM for UTF-8 and write empty data message
+    const BOM = '\uFEFF';
+    fs.writeFileSync(filePath, BOM + 'No data available');
     return;
   }
 
+  // Add BOM for UTF-8 to ensure proper encoding recognition
+  const BOM = '\uFEFF';
+
   const headers = Object.keys(data[0] as Record<string, unknown>).join(',');
-  const rows = data.map(row => 
+  const rows = data.map(row =>
     Object.values(row as Record<string, unknown>)
-      .map(val => `"${val}"`)
+      .map(val => {
+        if (val === null || val === undefined) return '';
+        const str = String(val);
+        // Escape quotes and wrap in quotes if contains comma, quote, or newline
+        if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+          return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+      })
       .join(',')
   );
 
   const csv = [headers, ...rows].join('\n');
-  fs.writeFileSync(filePath, csv);
+  fs.writeFileSync(filePath, BOM + csv, 'utf8');
 }
 
 export default router;
