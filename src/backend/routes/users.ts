@@ -1,7 +1,7 @@
-import express, { Response } from 'express';
+import express, { type Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { body, validationResult } from 'express-validator';
-import { authenticateToken, requireAdmin, AuthRequest } from '../middleware/auth';
+import { authenticateToken, requireAdmin, type AuthRequest } from '../middleware/auth';
 import db from '../config/database';
 
 const router = express.Router();
@@ -114,7 +114,7 @@ router.post('/change-password', [
 });
 
 // Get all users (Admin only)
-router.get('/', authenticateToken, requireAdmin, async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/', authenticateToken, requireAdmin, async (_req: AuthRequest, res: Response): Promise<void> => {
   try {
     const result = await db.query(
       `SELECT id, email, name, phone, role, is_active, created_at, updated_at

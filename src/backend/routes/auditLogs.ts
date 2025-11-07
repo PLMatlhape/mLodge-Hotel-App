@@ -1,6 +1,6 @@
-import express, { Response } from 'express';
+import express, { type Response } from 'express';
 import { query, validationResult } from 'express-validator';
-import { authenticateToken, requireAdmin, AuthRequest } from '../middleware/auth';
+import { authenticateToken, requireAdmin, type AuthRequest } from '../middleware/auth';
 import db from '../config/database';
 
 const router = express.Router();

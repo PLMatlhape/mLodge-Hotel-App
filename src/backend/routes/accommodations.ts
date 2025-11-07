@@ -1,7 +1,7 @@
-import express, { Response } from 'express';
+import express, { type Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import db from '../config/database';
-import { authenticateToken, requireAdmin, optionalAuth, AuthRequest } from '../middleware/auth';
+import { authenticateToken, requireAdmin, optionalAuth, type AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
 
@@ -12,11 +12,11 @@ router.get('/', optionalAuth, async (req: AuthRequest, res: Response): Promise<v
   try {
     const { 
       city, 
-      minPrice, 
-      maxPrice, 
-      guests, 
-      checkIn, 
-      checkOut,
+      minPrice: _minPrice, 
+      maxPrice: _maxPrice, 
+      guests: _guests, 
+      checkIn: _checkIn, 
+      checkOut: _checkOut,
       search,
       page,
       limit 

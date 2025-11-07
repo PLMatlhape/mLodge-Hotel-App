@@ -188,7 +188,7 @@ const BookingHistory: React.FC = () => {
                           <div className="flex justify-between items-center">
                             <span className="font-semibold text-gray-900">Total Amount</span>
                             <span className="text-xl font-bold text-[#0F51AF]">
-                              R {booking.total_amount.toLocaleString()}
+                              R {booking.total_amount?.toLocaleString() || '0'}
                             </span>
                           </div>
                         </div>

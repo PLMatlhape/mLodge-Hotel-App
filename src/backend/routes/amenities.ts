@@ -1,12 +1,12 @@
-import express, { Response } from 'express';
+import express, { type Response } from 'express';
 import { body, validationResult } from 'express-validator';
-import { authenticateToken, requireAdmin, AuthRequest } from '../middleware/auth';
+import { authenticateToken, requireAdmin, type AuthRequest } from '../middleware/auth';
 import db from '../config/database';
 
 const router = express.Router();
 
 // Get all amenities
-router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/', async (_req: AuthRequest, res: Response): Promise<void> => {
   try {
     const result = await db.query(
       'SELECT * FROM amenities ORDER BY name ASC'

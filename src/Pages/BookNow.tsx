@@ -19,7 +19,7 @@ const Booking: React.FC = () => {
   const dispatch = useAppDispatch();
   const [searchParams] = useSearchParams();
   const { isAuthenticated, user } = useAppSelector((state) => state.auth);
-  const { loading: bookingLoading } = useAppSelector((state) => state.bookings);
+  const { loading: _bookingLoading } = useAppSelector((state) => state.bookings);
   
   // Extract user information with proper fallbacks
   const userName = user?.name || '';
@@ -137,11 +137,14 @@ const Booking: React.FC = () => {
       
       console.log('Booking created successfully:', result);
       
-      // Show appropriate message based on auto-confirmation status
-      if (result.auto_confirmed) {
-        toast.success(`🎉 Booking automatically confirmed! Your room is reserved. Reference: ${result.booking_reference || transactionId}`);
+      // Show success message
+      const reference = (result as any).booking_reference || transactionId;
+      const autoConfirmed = (result as any).auto_confirmed;
+      
+      if (autoConfirmed) {
+        toast.success(`🎉 Booking automatically confirmed! Your room is reserved. Reference: ${reference}`);
       } else {
-        toast.success(`Booking received! Pending confirmation. Reference: ${result.booking_reference || transactionId}`);
+        toast.success(`Booking received! Pending confirmation. Reference: ${reference}`);
       }
       
       // Navigate to bookings page or dashboard after a short delay

@@ -1,6 +1,6 @@
-import express, { Response } from 'express';
+import express, { type Response } from 'express';
 import { body, validationResult } from 'express-validator';
-import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { authenticateToken, type AuthRequest } from '../middleware/auth';
 import db from '../config/database';
 
 const router = express.Router();

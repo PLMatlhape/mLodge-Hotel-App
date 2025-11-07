@@ -1,5 +1,5 @@
-import express, { Response } from 'express';
-import { authenticateToken, requireAdmin, AuthRequest } from '../middleware/auth';
+import express, { type Response } from 'express';
+import { authenticateToken, requireAdmin, type AuthRequest } from '../middleware/auth';
 import db from '../config/database';
 import bcrypt from 'bcrypt';
 
@@ -75,7 +75,7 @@ router.get('/:id', authenticateToken, requireAdmin, async (req: AuthRequest, res
 // Create new staff member
 router.post('/', authenticateToken, requireAdmin, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { name, email, password, role, phone, department, hire_date, salary, emergency_contact, address } = req.body;
+    const { name, email, password, role, phone, department: _department, hire_date: _hire_date, salary: _salary, emergency_contact: _emergency_contact, address: _address } = req.body;
 
     // Validate required fields
     if (!name || !email || !password || !role) {

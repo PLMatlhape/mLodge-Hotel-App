@@ -10,7 +10,8 @@ interface Booking {
   check_out_date: string;
   num_adults: number;
   num_children: number;
-  total_amount: number;
+  total_price: number;
+  total_amount?: number; // Alias for compatibility
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'rejected';
   guest_name: string;
   guest_email: string;
@@ -42,7 +43,7 @@ export const fetchMyBookings = createAsyncThunk(
   async () => {
     const response = await bookingsAPI.getMyBookings();
     // Backend returns { bookings: [...], pagination: {...} }
-    return response.data.bookings || [];
+    return (response.data as any).bookings || response.data || [];
   }
 );
 

@@ -164,8 +164,9 @@ export function AdminInventory() {
         errorMessage = err.message;
       }
       
+      console.error('❌ Delete room error:', error);
+      console.error('❌ Error response:', err.response?.data);
       toast.error(errorMessage);
-      console.error('Delete room error:', error);
     }
   };
 

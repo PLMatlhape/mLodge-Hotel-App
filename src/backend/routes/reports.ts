@@ -1,5 +1,5 @@
-import express, { Response } from 'express';
-import { authenticateToken, requireAdmin, AuthRequest } from '../middleware/auth';
+import express, { type Response } from 'express';
+import { authenticateToken, requireAdmin, type AuthRequest } from '../middleware/auth';
 import db from '../config/database';
 import path from 'path';
 import fs from 'fs';
@@ -215,7 +215,7 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req: AuthRequest, 
 async function generateReportAsync(
   reportId: number,
   type: string,
-  period: string,
+  _period: string,
   date_from: string | null,
   date_to: string | null,
   format: string,
@@ -290,7 +290,7 @@ async function generateReportAsync(
 }
 
 // Report generation helpers
-async function generateBookingsReport(date_from: string | null, date_to: string | null, filters: Record<string, unknown>) {
+async function generateBookingsReport(date_from: string | null, date_to: string | null, _filters: Record<string, unknown>) {
   let query = `
     SELECT b.*, u.name as guest_name, u.email as guest_email,
            acc.name as accommodation_name
@@ -320,7 +320,7 @@ async function generateBookingsReport(date_from: string | null, date_to: string 
   return result.rows;
 }
 
-async function generateRevenueReport(date_from: string | null, date_to: string | null, filters: Record<string, unknown>) {
+async function generateRevenueReport(date_from: string | null, date_to: string | null, _filters: Record<string, unknown>) {
   let query = `
     SELECT DATE(created_at) as date,
            COUNT(*) as bookings_count,
@@ -349,7 +349,7 @@ async function generateRevenueReport(date_from: string | null, date_to: string |
   return result.rows;
 }
 
-async function generateOccupancyReport(date_from: string | null, date_to: string | null, filters: Record<string, unknown>) {
+async function generateOccupancyReport(_date_from: string | null, _date_to: string | null, _filters: Record<string, unknown>) {
   const query = `
     SELECT acc.name as accommodation_name,
            COUNT(b.id) as total_bookings,
@@ -364,7 +364,7 @@ async function generateOccupancyReport(date_from: string | null, date_to: string
   return result.rows;
 }
 
-async function generateGuestsReport(date_from: string | null, date_to: string | null, filters: Record<string, unknown>) {
+async function generateGuestsReport(date_from: string | null, date_to: string | null, _filters: Record<string, unknown>) {
   let query = `
     SELECT u.id, u.name, u.email,
            COUNT(b.id) as total_bookings,
