@@ -293,30 +293,42 @@ export const amenitiesAPI = {
     api.post(`/amenities/accommodation/${accommodationId}`, { amenity_ids: amenityIds }),
 };
 
+// Inquiries API
+export const inquiriesAPI = {
+  create: (data: {
+    guest_name: string;
+    guest_email: string;
+    subject: string;
+    message: string;
+    priority?: string;
+    category?: string;
+  }) => api.post('/inquiries', data),
+};
+
 // Users API
 export const usersAPI = {
-  getProfile: () => 
+  getProfile: () =>
     api.get<User>('/users/profile'),
-  
-  updateProfile: (data: { name?: string; phone?: string }) => 
+
+  updateProfile: (data: { name?: string; phone?: string }) =>
     api.put<User>('/users/profile', data),
-  
-  changePassword: (data: { current_password: string; new_password: string }) => 
+
+  changePassword: (data: { current_password: string; new_password: string }) =>
     api.post('/users/change-password', data),
-  
-  getAll: () => 
+
+  getAll: () =>
     api.get<User[]>('/users'),
-  
-  getById: (id: number) => 
+
+  getById: (id: number) =>
     api.get<User>(`/users/${id}`),
-  
-  update: (id: number, data: Partial<User>) => 
+
+  update: (id: number, data: Partial<User>) =>
     api.put<User>(`/users/${id}`, data),
-  
-  delete: (id: number) => 
+
+  delete: (id: number) =>
     api.delete(`/users/${id}`),
-  
-  getStats: (id: number) => 
+
+  getStats: (id: number) =>
     api.get(`/users/${id}/stats`),
 };
 
