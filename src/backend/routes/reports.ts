@@ -361,9 +361,7 @@ async function generateRevenueReport(date_from: string | null, date_to: string |
   return result.rows;
 }
 
-async function generateOccupancyReport(_date_from: string | null, _date_to: string | null, _filters: Record<string, unknown>) {
-  const query = `
-async function generateOccupancyReport(date_from: string | null, date_to: string | null, filters: Record<string, unknown>) {
+async function generateOccupancyReport(date_from: string | null, date_to: string | null, _filters: Record<string, unknown>) {
   let query = `
     SELECT acc.name as accommodation_name,
            COUNT(b.id) as total_bookings,
