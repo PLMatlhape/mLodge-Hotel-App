@@ -42,10 +42,16 @@ api.interceptors.response.use(
     }
     
     if (error.response?.status === 401) {
-      // Token expired or invalid
+      // Token expired or invalid - only redirect if we had a token
+      const hadToken = localStorage.getItem('token');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      
+      // Only redirect to login if the user was logged in before
+      // Don't redirect for public endpoints accessed without login
+      if (hadToken) {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

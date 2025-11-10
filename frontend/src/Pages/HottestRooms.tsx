@@ -40,10 +40,12 @@ interface HottestRoomsProps {
 
 const HottestRooms: React.FC<HottestRoomsProps> = ({ onRoomClick }) => {
   const dispatch = useAppDispatch();
-  const { rooms: reduxRooms } = useAppSelector((state) => state.rooms);
+  const { rooms: reduxRooms, loading, error } = useAppSelector((state) => state.rooms);
 
   // Fetch hottest rooms (top 3 most booked) from database on component mount
+  // This works for both authenticated and unauthenticated users
   useEffect(() => {
+    console.log('🔥 Fetching hottest rooms for display (no auth required)');
     dispatch(fetchHottestRooms());
   }, [dispatch]);
 
@@ -51,8 +53,8 @@ const HottestRooms: React.FC<HottestRoomsProps> = ({ onRoomClick }) => {
   // Backend already returns only the top 3 most booked available rooms
   const rooms: Room[] = reduxRooms.map((room) => {
     const roomData = room as unknown as Record<string, unknown>;
-    const photos = (roomData.photos as Array<{ url: string; is_primary: boolean }>) || [];
-    const firstPhoto = photos[0]?.url || '';
+    const photos = (roomData.photos as Array<{ url: string; sort_order?: number }>) || [];
+    const firstPhoto = photos[0]?.url || '/placeholder-room.svg';
     
     return {
       id: roomData.id as number,
@@ -128,7 +130,26 @@ const HottestRooms: React.FC<HottestRoomsProps> = ({ onRoomClick }) => {
 
           {/* Rooms Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {rooms.map((room) => (
+            {loading && (
+              <div className="col-span-3 text-center py-12">
+                <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+                <p className="text-white mt-4">Loading hottest rooms...</p>
+              </div>
+            )}
+            
+            {error && !loading && (
+              <div className="col-span-3 text-center py-12">
+                <p className="text-white text-lg">Unable to load rooms. Please try again later.</p>
+              </div>
+            )}
+            
+            {!loading && !error && rooms.length === 0 && (
+              <div className="col-span-3 text-center py-12">
+                <p className="text-white text-lg">No rooms available at the moment.</p>
+              </div>
+            )}
+            
+            {!loading && !error && rooms.map((room) => (
               <div 
                 key={room.id}
                 className="bg-white rounded-3xl overflow-hidden shadow-xl transform transition-transform hover:scale-105"
