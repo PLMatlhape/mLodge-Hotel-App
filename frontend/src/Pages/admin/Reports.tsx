@@ -35,7 +35,7 @@ export function AdminReports() {
 
   const handleGenerateReport = async () => {
     try {
-      const result = await dispatch(generateReport({
+      await dispatch(generateReport({
         type: reportType,
         period: timePeriod,
         format: format,
@@ -227,7 +227,7 @@ export function AdminReports() {
                         </span>
                       </td>
                       <td className="py-2 sm:py-3 px-3 sm:px-4 text-gray-text text-xs sm:text-sm">
-                        {new Date(report.created_at || report.generated_at).toLocaleDateString()}
+                        {new Date(report.created_at || report.generated_at || Date.now()).toLocaleDateString()}
                       </td>
                       <td className="py-2 sm:py-3 px-3 sm:px-4">
                         <Button

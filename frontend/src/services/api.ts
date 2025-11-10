@@ -1,7 +1,12 @@
 import axios, { AxiosError } from 'axios';
 
-// API Base URL
+// API Base URL - Use environment variable with fallback to localhost
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+
+// Log API URL in development for debugging
+if (import.meta.env.DEV) {
+  console.log('🔗 API Base URL:', API_BASE_URL);
+}
 
 // Create axios instance
 const api = axios.create({
@@ -9,6 +14,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // Enable credentials for CORS
 });
 
 // Request interceptor to add JWT token
@@ -21,6 +27,7 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
+    console.error('❌ Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
@@ -29,6 +36,11 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
+    // Log errors in development
+    if (import.meta.env.DEV) {
+      console.error('❌ API Error:', error.response?.data || error.message);
+    }
+    
     if (error.response?.status === 401) {
       // Token expired or invalid
       localStorage.removeItem('token');
