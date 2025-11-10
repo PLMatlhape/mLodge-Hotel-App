@@ -1,0 +1,6 @@
+﻿id,name,email,total_bookings,total_spent
+6,Mike Johnson,mike.johnson@example.com,0,
+4,J Doe,john.doe@example.com,4,31200.00
+7,Sarah Mnisi,sarah.wilson@example.com,2,17500.00
+5,Jane Smith,jane.smith@example.com,4,15300.00
+1,Vukona Mnisi,vukona@mlodgehotel.co.za,2,12800.00
