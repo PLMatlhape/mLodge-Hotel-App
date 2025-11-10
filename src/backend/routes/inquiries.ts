@@ -109,7 +109,7 @@ router.post('/', async (req, res): Promise<void> => {
 });
 
 // Respond to inquiry
-router.post('/:id/respond', authenticateToken, requireAdmin, async (req: AuthRequest, res: Response): Promise<void> => {
+router.put('/:id/respond', authenticateToken, requireAdmin, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { response } = req.body;
@@ -147,7 +147,7 @@ router.post('/:id/respond', authenticateToken, requireAdmin, async (req: AuthReq
 });
 
 // Update inquiry status
-router.patch('/:id/status', authenticateToken, requireAdmin, async (req: AuthRequest, res: Response): Promise<void> => {
+router.put('/:id/status', authenticateToken, requireAdmin, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { status } = req.body;

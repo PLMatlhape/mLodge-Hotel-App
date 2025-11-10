@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Home from './Pages/Home'
 import Login from './Pages/Login'
 import Register from './Pages/Register'
+import Contact from './Pages/Contact'
 import Dashboard from './Pages/Client/Dashboard'
 import Profile from './Pages/Client/Profile'
 import Favourites from './Pages/Client/Favourites'
@@ -17,6 +18,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/contact" element={<Contact />} />
 
         {/* Client Routes */}
         <Route path="/dashboard" element={<Dashboard />} />
