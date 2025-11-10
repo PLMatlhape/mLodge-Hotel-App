@@ -1,11 +1,11 @@
-import express, { Response } from 'express';
-import { authenticateToken, requireAdmin, AuthRequest } from '../middleware/auth';
+import express, { type Response } from 'express';
+import { authenticateToken, requireAdmin, type AuthRequest } from '../middleware/auth';
 import db from '../config/database';
 
 const router = express.Router();
 
 // Dashboard statistics
-router.get('/dashboard/stats', authenticateToken, requireAdmin, async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/dashboard/stats', authenticateToken, requireAdmin, async (_req: AuthRequest, res: Response): Promise<void> => {
   try {
     const stats = await db.query(
       `SELECT 
@@ -225,7 +225,7 @@ router.get('/analytics/occupancy', authenticateToken, requireAdmin, async (req: 
 });
 
 // User growth analytics
-router.get('/analytics/user-growth', authenticateToken, requireAdmin, async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/analytics/user-growth', authenticateToken, requireAdmin, async (_req: AuthRequest, res: Response): Promise<void> => {
   try {
     const result = await db.query(
       `SELECT 
@@ -246,7 +246,7 @@ router.get('/analytics/user-growth', authenticateToken, requireAdmin, async (req
 });
 
 // System health check
-router.get('/health', authenticateToken, requireAdmin, async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/health', authenticateToken, requireAdmin, async (_req: AuthRequest, res: Response): Promise<void> => {
   try {
     const dbCheck = await db.query('SELECT NOW()');
     

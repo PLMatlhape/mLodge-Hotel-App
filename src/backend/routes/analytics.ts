@@ -1,11 +1,11 @@
-import express, { Response } from 'express';
-import { authenticateToken, requireAdmin, AuthRequest } from '../middleware/auth';
+import express, { type Response } from 'express';
+import { authenticateToken, requireAdmin, type AuthRequest } from '../middleware/auth';
 import db from '../config/database';
 
 const router = express.Router();
 
 // Get dashboard overview statistics
-router.get('/dashboard', authenticateToken, requireAdmin, async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/dashboard', authenticateToken, requireAdmin, async (_req: AuthRequest, res: Response): Promise<void> => {
   try {
     // Default values in case of empty database
     let totalBookings = 0;
@@ -426,29 +426,54 @@ router.get('/room-type-distribution', authenticateToken, requireAdmin, async (_r
   try {
     const result = await db.query(
       `SELECT 
-        r.room_type as name,
-        COUNT(b.id) as value,
-        '#0F51AF' as color
+        COALESCE(r.room_type, 'Standard') as name,
+        COUNT(b.id) as booking_count,
+        COALESCE(SUM(b.total_price), 0) as total_revenue,
+        COUNT(DISTINCT b.user_id) as unique_guests
        FROM rooms r
        LEFT JOIN booking_items bi ON bi.room_id = r.id
-       LEFT JOIN bookings b ON b.id = bi.booking_id AND b.status IN ('confirmed', 'completed')
+       LEFT JOIN bookings b ON b.id = bi.booking_id 
+         AND b.status IN ('confirmed', 'completed')
+         AND b.created_at >= CURRENT_DATE - INTERVAL '12 months'
        WHERE r.is_active = true
        GROUP BY r.room_type
-       ORDER BY value DESC`
+       ORDER BY booking_count DESC`
     );
 
     // Assign different colors to each room type
-    const colors = ['#0F51AF', '#627182', '#001C43', '#D9D9D9', '#4A90E2'];
-    const data = result.rows.map((row, index) => ({
-      ...row,
-      value: parseInt(row.value),
-      color: colors[index % colors.length]
-    }));
+    const colors = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82ca9d', '#ffc658', '#ff7c7c'];
+    
+    const data = result.rows.length > 0 
+      ? result.rows.map((row, index) => ({
+          name: row.name || 'Standard',
+          value: parseInt(row.booking_count) || 0,
+          revenue: parseFloat(row.total_revenue) || 0,
+          guests: parseInt(row.unique_guests) || 0,
+          color: colors[index % colors.length],
+          percentage: 0 // Will be calculated below
+        }))
+      : [
+          { name: 'Standard', value: 0, revenue: 0, guests: 0, color: colors[0], percentage: 0 },
+          { name: 'Deluxe', value: 0, revenue: 0, guests: 0, color: colors[1], percentage: 0 },
+          { name: 'Suite', value: 0, revenue: 0, guests: 0, color: colors[2], percentage: 0 }
+        ];
+
+    // Calculate percentages
+    const totalBookings = data.reduce((sum, item) => sum + item.value, 0);
+    if (totalBookings > 0) {
+      data.forEach(item => {
+        item.percentage = parseFloat(((item.value / totalBookings) * 100).toFixed(1));
+      });
+    }
 
     res.json(data);
   } catch (error) {
     console.error('Error fetching room type distribution:', error);
-    res.json([]);
+    res.json([
+      { name: 'Standard', value: 0, revenue: 0, guests: 0, color: '#0088FE', percentage: 0 },
+      { name: 'Deluxe', value: 0, revenue: 0, guests: 0, color: '#00C49F', percentage: 0 },
+      { name: 'Suite', value: 0, revenue: 0, guests: 0, color: '#FFBB28', percentage: 0 }
+    ]);
   }
 });
 
@@ -458,26 +483,43 @@ router.get('/booking-sources', authenticateToken, requireAdmin, async (_req: Aut
     const result = await db.query(
       `SELECT 
         COALESCE(source, 'Website') as source,
-        COUNT(*) as bookings
+        COUNT(*) as bookings,
+        COALESCE(SUM(total_price), 0) as revenue,
+        ROUND(AVG(total_price), 2) as avg_booking_value
        FROM bookings
        WHERE status IN ('confirmed', 'completed')
+         AND created_at >= CURRENT_DATE - INTERVAL '12 months'
        GROUP BY source
        ORDER BY bookings DESC`
     );
 
-    res.json(result.rows.map(row => ({
-      source: row.source,
-      bookings: parseInt(row.bookings)
-    })));
+    const data = result.rows.length > 0
+      ? result.rows.map(row => ({
+          source: row.source,
+          bookings: parseInt(row.bookings) || 0,
+          revenue: parseFloat(row.revenue) || 0,
+          avgValue: parseFloat(row.avg_booking_value) || 0
+        }))
+      : [
+          { source: 'Website', bookings: 0, revenue: 0, avgValue: 0 },
+          { source: 'Mobile App', bookings: 0, revenue: 0, avgValue: 0 },
+          { source: 'Phone', bookings: 0, revenue: 0, avgValue: 0 },
+          { source: 'Walk-in', bookings: 0, revenue: 0, avgValue: 0 },
+          { source: 'Partner', bookings: 0, revenue: 0, avgValue: 0 }
+        ];
+
+    res.json(data);
   } catch (error) {
     console.error('Error fetching booking sources:', error);
     res.json([
-      { source: 'Website', bookings: 0 },
-      { source: 'Mobile App', bookings: 0 },
-      { source: 'Phone', bookings: 0 },
-      { source: 'Walk-in', bookings: 0 }
+      { source: 'Website', bookings: 0, revenue: 0, avgValue: 0 },
+      { source: 'Mobile App', bookings: 0, revenue: 0, avgValue: 0 },
+      { source: 'Phone', bookings: 0, revenue: 0, avgValue: 0 },
+      { source: 'Walk-in', bookings: 0, revenue: 0, avgValue: 0 },
+      { source: 'Partner', bookings: 0, revenue: 0, avgValue: 0 }
     ]);
   }
 });
 
 export default router;
+

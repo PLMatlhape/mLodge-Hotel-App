@@ -8,7 +8,7 @@ import {
   clearPaymentResult,
 } from '../../store/slices/paymentSlice';
 import paymentService from '../../services/paymentService';
-import type { PaymentMethod, CreditCardDetails } from '../../services/paymentService';
+import type { CreditCardDetails } from '../../services/paymentService';
 import { toast } from '../../lib/toast';
 
 interface PaymentFormProps {

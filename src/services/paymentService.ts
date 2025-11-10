@@ -59,7 +59,6 @@ export interface PaymentResult {
 
 class PaymentService {
   private stripePublicKey: string = import.meta.env.VITE_STRIPE_PUBLIC_KEY || 'pk_test_demo';
-  private paypalClientId: string = import.meta.env.VITE_PAYPAL_CLIENT_ID || 'paypal_demo_client';
 
   /**
    * Validate credit card number using Luhn algorithm

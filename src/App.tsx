@@ -6,6 +6,7 @@ import Contact from './Pages/Contact'
 import Dashboard from './Pages/Client/Dashboard'
 import Profile from './Pages/Client/Profile'
 import Favourites from './Pages/Client/Favourites'
+import Bookings from './Pages/Client/Bookings'
 import BookNow from './Pages/BookNow'
 import AdminDashboard from './Pages/admin/AdminDashboard'
 import './App.css'
@@ -24,6 +25,7 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/favourites" element={<Favourites />} />
+        <Route path="/bookings" element={<Bookings />} />
         <Route path="/book" element={<BookNow />} />
 
         {/* Admin Routes */}

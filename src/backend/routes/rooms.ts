@@ -1,6 +1,6 @@
-import express, { Response } from 'express';
+import express, { type Response } from 'express';
 import { body, validationResult, query } from 'express-validator';
-import { authenticateToken, requireAdmin, optionalAuth, AuthRequest } from '../middleware/auth';
+import { authenticateToken, requireAdmin, optionalAuth, type AuthRequest } from '../middleware/auth';
 import db from '../config/database';
 
 const router = express.Router();
@@ -386,14 +386,15 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req: AuthRequest, 
 
     const roomName = checkResult.rows[0].name;
 
-    // Check for existing bookings
+    // Check for ACTIVE bookings only (exclude cancelled and refunded)
     const bookingCheck = await db.query(
       `SELECT COUNT(*) as count, 
               MIN(b.check_in_date) as earliest_checkin,
               MAX(b.check_out_date) as latest_checkout
        FROM booking_items bi
        JOIN bookings b ON b.id = bi.booking_id
-       WHERE bi.room_id = $1`,
+       WHERE bi.room_id = $1
+         AND b.status NOT IN ('cancelled', 'refunded')`,
       [id]
     );
 
@@ -403,16 +404,26 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req: AuthRequest, 
       const latestCheckout = bookingCheck.rows[0].latest_checkout;
       
       res.status(409).json({ 
-        error: `Cannot delete room "${roomName}" because it has ${bookingCount} existing booking(s). Bookings range from ${new Date(earliestCheckin).toLocaleDateString()} to ${new Date(latestCheckout).toLocaleDateString()}. Please cancel all bookings first or contact support to archive this room instead.`
+        error: `Cannot delete room "${roomName}" because it has ${bookingCount} active booking(s). Bookings range from ${new Date(earliestCheckin).toLocaleDateString()} to ${new Date(latestCheckout).toLocaleDateString()}. Please cancel all bookings first or contact support to archive this room instead.`
       });
       return;
     }
 
-    // Delete related records first (photos, reviews, etc.)
-    // Delete room photos
+    // Delete related records first
+    // 1. Delete booking_items for cancelled/refunded bookings
+    await db.query(
+      `DELETE FROM booking_items 
+       WHERE room_id = $1 
+       AND booking_id IN (
+         SELECT id FROM bookings WHERE status IN ('cancelled', 'refunded')
+       )`,
+      [id]
+    );
+
+    // 2. Delete room photos
     await db.query('DELETE FROM room_photos WHERE room_id = $1', [id]);
     
-    // Delete the room
+    // 3. Delete the room
     await db.query('DELETE FROM rooms WHERE id = $1', [id]);
 
     res.json({ message: 'Room deleted successfully', id: parseInt(id) });
@@ -432,7 +443,7 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req: AuthRequest, 
 });
 
 // Get hottest rooms (top 3 most booked, or available rooms if not enough bookings)
-router.get('/hottest/top', async (req: AuthRequest, res: Response): Promise<void> => {
+router.get('/hottest/top', async (_req: AuthRequest, res: Response): Promise<void> => {
   try {
     // First, try to get rooms with bookings (hottest)
     const hottestQuery = `

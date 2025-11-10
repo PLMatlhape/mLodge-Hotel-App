@@ -46,12 +46,12 @@ async function insertDummyRefunds() {
     // Get accommodation IDs
     const accommodations = await client.query('SELECT id, name FROM accommodations ORDER BY id');
     console.log('\n🏨 Available accommodations:');
-    accommodations.rows.forEach(acc => console.log(`  ${acc.id}: ${acc.name}`));
+    accommodations.rows.forEach((acc: any) => console.log(`  ${acc.id}: ${acc.name}`));
 
     // Get room IDs and prices
     const rooms = await client.query('SELECT id, name, accommodation_id, price_per_night FROM rooms ORDER BY id');
     console.log('\n🏠 Available rooms:');
-    rooms.rows.forEach(room => console.log(`  ${room.id}: ${room.name} (${room.price_per_night} ZAR)`));
+    rooms.rows.forEach((room: any) => console.log(`  ${room.id}: ${room.name} (${room.price_per_night} ZAR)`));
 
     // Create dummy bookings
     console.log('\n📅 Creating dummy bookings...');
@@ -81,7 +81,7 @@ async function insertDummyRefunds() {
       await client.query(
         `INSERT INTO booking_items (booking_id, room_id, price_per_night, nights, quantity)
          VALUES ($1, $2, $3, $4, $5)`,
-        [result.rows[0].id, booking.room_id, rooms.rows.find(r => r.id === booking.room_id)?.price_per_night || 4500, 2, 1]
+        [result.rows[0].id, booking.room_id, rooms.rows.find((r: any) => r.id === booking.room_id)?.price_per_night || 4500, 2, 1]
       );
     }
 
@@ -212,7 +212,7 @@ async function insertDummyRefunds() {
     `);
 
     console.log('\n📋 Inserted refunds:');
-    refundsResult.rows.forEach(refund => {
+    refundsResult.rows.forEach((refund: any) => {
       console.log(`  ID ${refund.id}: ${refund.guest_name} - R ${refund.refund_amount} (${refund.status})`);
     });
 

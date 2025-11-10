@@ -1,4 +1,4 @@
-import express, { Request, Response, NextFunction } from 'express';
+import express, { type Request, type Response, type NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -22,6 +22,7 @@ import emailTemplatesRoutes from './routes/emailTemplates';
 import reportsRoutes from './routes/reports';
 import analyticsRoutes from './routes/analytics';
 import auditLogsRoutes from './routes/auditLogs';
+import paymentsRoutes from './routes/payments';
 
 dotenv.config();
 
@@ -71,6 +72,7 @@ app.use('/api/bookings', bookingsRoutes);
 app.use('/api/reviews', reviewsRoutes);
 app.use('/api/amenities', amenitiesRoutes);
 app.use('/api/favourites', favouritesRoutes);
+app.use('/api/payments', paymentsRoutes); // Payment processing routes
 app.use('/api/promo-codes', promoCodesRoutes); // Public promo codes endpoint
 app.use('/api/refunds', refundsRoutes); // Public refunds endpoint
 app.use('/api/inquiries', inquiriesRoutes); // Public inquiries endpoint

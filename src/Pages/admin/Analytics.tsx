@@ -2,14 +2,14 @@ import { useState, useEffect } from 'react';
 import { Calendar as CalendarIcon, TrendingUp, Users, DollarSign, Loader2, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, BarChart, Bar, AreaChart, Area, PieChart, Pie, Cell, Legend, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import backgroundImage from '../../assets/image/background/Offers-section.jpeg';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { fetchDashboardStats, fetchBookingTrends, fetchRevenueTrends, fetchPerformanceStats, fetchRoomTypeDistribution, fetchBookingSources } from '../../store/slices/analyticsSlice';
 
 export function AdminAnalytics() {
   const dispatch = useAppDispatch();
-  const { dashboardStats, bookingTrends, performanceStats, loading, error } = useAppSelector((state) => state.analytics);
+  const { dashboardStats, bookingTrends, performanceStats, roomTypeData, bookingSourceData, loading, error } = useAppSelector((state) => state.analytics);
   
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year'>('year');
 
@@ -276,12 +276,67 @@ export function AdminAnalytics() {
             <CardTitle style={{ color: '#000000' }}>Bookings by Room Type</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-center h-[300px]">
-              <div className="text-center">
-                <p className="text-gray-text mb-2">Room type analytics coming soon</p>
-                <p className="text-gray-text text-sm">Data will be populated from the database</p>
+            {roomTypeData.length > 0 && roomTypeData.some((item: any) => item.value > 0) ? (
+              <div className="space-y-4">
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={roomTypeData as any[]}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percentage }: any) => `${name}: ${percentage}%`}
+                      outerRadius={100}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {roomTypeData.map((entry: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      content={({ active, payload }: any) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload;
+                          return (
+                            <div className="bg-white p-3 border rounded shadow-lg">
+                              <p className="font-semibold">{data.name}</p>
+                              <p className="text-sm">Bookings: {data.value}</p>
+                              <p className="text-sm">Revenue: ${data.revenue.toLocaleString()}</p>
+                              <p className="text-sm">Guests: {data.guests}</p>
+                              <p className="text-sm">Share: {data.percentage}%</p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="grid grid-cols-1 gap-2 text-sm">
+                  {roomTypeData.map((item: any, index: number) => (
+                    <div key={index} className="flex justify-between items-center p-2 bg-white bg-opacity-50 rounded">
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded" style={{ backgroundColor: item.color }}></div>
+                        <span className="font-medium">{item.name}</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-semibold">{item.value} bookings</div>
+                        <div className="text-xs text-gray-600">${item.revenue.toLocaleString()}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-center justify-center h-[300px]">
+                <div className="text-center">
+                  <p className="text-gray-text mb-2">No room type data available yet</p>
+                  <p className="text-gray-text text-sm">Start receiving bookings to see distribution</p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -292,12 +347,51 @@ export function AdminAnalytics() {
           <CardTitle style={{ color: '#000000' }}>Booking Sources</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-center h-[300px]">
-            <div className="text-center">
-              <p className="text-gray-text mb-2">Booking source analytics coming soon</p>
-              <p className="text-gray-text text-sm">Data will be populated from the database</p>
+          {bookingSourceData.length > 0 && bookingSourceData.some((item: any) => item.bookings > 0) ? (
+            <div className="space-y-4">
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={bookingSourceData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="source" />
+                  <YAxis />
+                  <Tooltip 
+                    content={({ active, payload }: any) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <div className="bg-white p-3 border rounded shadow-lg">
+                            <p className="font-semibold">{data.source}</p>
+                            <p className="text-sm">Bookings: {data.bookings}</p>
+                            <p className="text-sm">Revenue: ${data.revenue.toLocaleString()}</p>
+                            <p className="text-sm">Avg Value: ${data.avgValue.toLocaleString()}</p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Bar dataKey="bookings" fill="#0F51AF" />
+                </BarChart>
+              </ResponsiveContainer>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {bookingSourceData.map((item: any, index: number) => (
+                  <div key={index} className="p-3 bg-white bg-opacity-50 rounded">
+                    <div className="font-semibold text-sm">{item.source}</div>
+                    <div className="text-2xl font-bold text-[#0F51AF]">{item.bookings}</div>
+                    <div className="text-xs text-gray-600">${item.revenue.toLocaleString()} revenue</div>
+                    <div className="text-xs text-gray-500">Avg: ${item.avgValue.toLocaleString()}</div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center justify-center h-[300px]">
+              <div className="text-center">
+                <p className="text-gray-text mb-2">No booking source data available yet</p>
+                <p className="text-gray-text text-sm">Tracking Website, Mobile App, Phone, Walk-in, and Partner bookings</p>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
       </div>
