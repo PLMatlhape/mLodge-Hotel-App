@@ -104,14 +104,24 @@ export const exportAuditLogs = createAsyncThunk(
     format?: 'csv' | 'json';
   }) => {
     const token = getAuthToken();
-    const params = new URLSearchParams(filters as Record<string, string>);
-    
+    const params = new URLSearchParams();
+
+    // Only add defined filters to avoid sending 'undefined' strings
+    if (filters.module) params.append('module', filters.module);
+    if (filters.action) params.append('action', filters.action);
+    if (filters.startDate) params.append('startDate', filters.startDate);
+    if (filters.endDate) params.append('endDate', filters.endDate);
+    if (filters.format) params.append('format', filters.format);
+
     const response = await fetch(`${API_BASE_URL}/audit-logs/export?${params.toString()}`, {
       headers: { 'Authorization': `Bearer ${token}` },
     });
-    
-    if (!response.ok) throw new Error('Failed to export audit logs');
-    
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Failed to export audit logs' }));
+      throw new Error(errorData.error || 'Failed to export audit logs');
+    }
+
     // Handle file download
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
@@ -122,7 +132,7 @@ export const exportAuditLogs = createAsyncThunk(
     a.click();
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
-    
+
     return { success: true };
   }
 );
