@@ -444,31 +444,48 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req: AuthRequest, 
 
 // Get hottest rooms (top 3 most booked, or available rooms if not enough bookings)
 router.get('/hottest/top', async (_req: AuthRequest, res: Response): Promise<void> => {
+  console.log('🔥 Hottest rooms endpoint called');
   try {
-    // First, try to get rooms with bookings (hottest)
-    const hottestQuery = `
-      SELECT r.*,
-             a.name as accommodation_name,
-             a.city as accommodation_city,
-             COUNT(bi.id) as booking_count,
-             COALESCE(json_agg(
-               DISTINCT jsonb_build_object('url', p.url, 'sort_order', p.sort_order, 'is_primary', p.is_primary)
-               ORDER BY p.is_primary DESC, p.sort_order ASC
-             ) FILTER (WHERE p.id IS NOT NULL), '[]') as photos
-      FROM rooms r
-      LEFT JOIN accommodations a ON a.id = r.accommodation_id
-      LEFT JOIN room_photos p ON p.room_id = r.id
-      LEFT JOIN booking_items bi ON bi.room_id = r.id
-      LEFT JOIN bookings b ON b.id = bi.booking_id AND b.status NOT IN ('cancelled', 'rejected')
-      WHERE r.status = 'available'
-      GROUP BY r.id, a.name, a.city
-      HAVING COUNT(bi.id) > 0
-      ORDER BY booking_count DESC, r.id DESC
-      LIMIT 3
+    // Check if booking_items table exists, if not just return available rooms
+    const checkTableQuery = `
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'booking_items'
+      );
     `;
+    
+    const tableCheck = await db.query(checkTableQuery);
+    const tableExists = tableCheck.rows[0].exists;
 
-    const hottestResult = await db.query(hottestQuery);
-    const hottestRooms = hottestResult.rows;
+    let hottestRooms: any[] = [];
+
+    if (tableExists) {
+      // First, try to get rooms with bookings (hottest)
+      const hottestQuery = `
+        SELECT r.*,
+               a.name as accommodation_name,
+               a.city as accommodation_city,
+               COUNT(bi.id) as booking_count,
+               COALESCE(json_agg(
+                 DISTINCT jsonb_build_object('url', p.url, 'sort_order', p.sort_order, 'is_primary', p.is_primary)
+                 ORDER BY p.is_primary DESC, p.sort_order ASC
+               ) FILTER (WHERE p.id IS NOT NULL), '[]') as photos
+        FROM rooms r
+        LEFT JOIN accommodations a ON a.id = r.accommodation_id
+        LEFT JOIN room_photos p ON p.room_id = r.id
+        LEFT JOIN booking_items bi ON bi.room_id = r.id
+        LEFT JOIN bookings b ON b.id = bi.booking_id AND b.status NOT IN ('cancelled', 'rejected')
+        WHERE r.status = 'available'
+        GROUP BY r.id, a.name, a.city
+        HAVING COUNT(bi.id) > 0
+        ORDER BY booking_count DESC, r.id DESC
+        LIMIT 3
+      `;
+
+      const hottestResult = await db.query(hottestQuery);
+      hottestRooms = hottestResult.rows;
+    }
 
     // If we have fewer than 3 rooms with bookings, fill with other available rooms
     if (hottestRooms.length < 3) {
@@ -501,8 +518,13 @@ router.get('/hottest/top', async (_req: AuthRequest, res: Response): Promise<voi
       res.json(hottestRooms);
     }
   } catch (error) {
-    console.error('Error fetching hottest rooms:', error);
-    res.status(500).json({ error: 'Failed to fetch hottest rooms', details: error instanceof Error ? error.message : 'Unknown error' });
+    console.error('❌ Error fetching hottest rooms:', error);
+    console.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+    res.status(500).json({ 
+      error: 'Failed to fetch hottest rooms', 
+      details: error instanceof Error ? error.message : 'Unknown error' 
+    });
   }
 });
 
