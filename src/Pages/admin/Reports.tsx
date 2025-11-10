@@ -35,12 +35,13 @@ export function AdminReports() {
 
   const handleGenerateReport = async () => {
     try {
-      await dispatch(generateReport({
+      const result = await dispatch(generateReport({
         type: reportType,
         period: timePeriod,
         format: format,
       })).unwrap();
-      toast.success('Report generated successfully');
+      toast.success('Report generation started successfully');
+      // Refresh reports list to show the new report
       dispatch(fetchReports());
     } catch (error) {
       toast.error('Failed to generate report');
@@ -147,7 +148,7 @@ export function AdminReports() {
                 <SelectItem value="bookings" className="text-black">Bookings Report</SelectItem>
                 <SelectItem value="revenue" className="text-black">Revenue Report</SelectItem>
                 <SelectItem value="occupancy" className="text-black">Occupancy Report</SelectItem>
-                <SelectItem value="guest" className="text-black">Guest Report</SelectItem>
+                <SelectItem value="guests" className="text-black">Guest Report</SelectItem>
               </SelectContent>
             </Select>
             <Select value={timePeriod} onValueChange={(value) => setTimePeriod(value as typeof timePeriod)}>
@@ -155,10 +156,10 @@ export function AdminReports() {
                 <SelectValue placeholder="Time Period" />
               </SelectTrigger>
               <SelectContent className="bg-gray-light border-gray-text/20">
-                <SelectItem value="week" className="text-black">Last 7 Days</SelectItem>
-                <SelectItem value="month" className="text-black">Last 30 Days</SelectItem>
-                <SelectItem value="quarter" className="text-black">Last Quarter</SelectItem>
-                <SelectItem value="year" className="text-black">Last Year</SelectItem>
+                <SelectItem value="weekly" className="text-black">Last 7 Days</SelectItem>
+                <SelectItem value="monthly" className="text-black">Last 30 Days</SelectItem>
+                <SelectItem value="quarterly" className="text-black">Last Quarter</SelectItem>
+                <SelectItem value="yearly" className="text-black">Last Year</SelectItem>
               </SelectContent>
             </Select>
             <Select value={format} onValueChange={(value) => setFormat(value as typeof format)}>
@@ -226,7 +227,7 @@ export function AdminReports() {
                         </span>
                       </td>
                       <td className="py-2 sm:py-3 px-3 sm:px-4 text-gray-text text-xs sm:text-sm">
-                        {new Date(report.generated_at).toLocaleDateString()}
+                        {new Date(report.created_at || report.generated_at).toLocaleDateString()}
                       </td>
                       <td className="py-2 sm:py-3 px-3 sm:px-4">
                         <Button
