@@ -442,64 +442,54 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req: AuthRequest, 
   }
 });
 
-// Get hottest rooms (top 3 most booked, or available rooms if not enough bookings)
+// Get hottest rooms (top 3 most booked from different accommodations)
 router.get('/hottest/top', async (_req: AuthRequest, res: Response): Promise<void> => {
   try {
-    // First, try to get rooms with bookings (hottest)
+    // Simplified query to get top 3 available rooms from different accommodations
     const hottestQuery = `
-      SELECT r.*,
+      SELECT DISTINCT ON (r.accommodation_id)
+             r.id,
+             r.accommodation_id,
+             r.name,
+             r.description,
+             r.capacity,
+             r.beds,
+             r.price_per_night,
+             r.refundable,
+             r.created_at,
+             r.updated_at,
+             r.deleted_at,
+             r.location,
+             r.baths,
+             r.area,
+             r.type,
+             r.amenities,
+             r.room_features,
+             r.quantity,
+             r.status,
              a.name as accommodation_name,
              a.city as accommodation_city,
-             COUNT(bi.id) as booking_count,
-             COALESCE(json_agg(
-               DISTINCT jsonb_build_object('url', p.url, 'sort_order', p.sort_order, 'is_primary', p.is_primary)
-               ORDER BY p.is_primary DESC, p.sort_order ASC
-             ) FILTER (WHERE p.id IS NOT NULL), '[]') as photos
+             COALESCE(
+               (SELECT json_agg(json_build_object('url', p.url, 'sort_order', p.sort_order) ORDER BY p.sort_order ASC)
+                FROM room_photos p
+                WHERE p.room_id = r.id),
+               '[]'::json
+             ) as photos,
+             COALESCE(COUNT(bi.id), 0) as booking_count
       FROM rooms r
-      LEFT JOIN accommodations a ON a.id = r.accommodation_id
-      LEFT JOIN room_photos p ON p.room_id = r.id
+      INNER JOIN accommodations a ON a.id = r.accommodation_id AND a.is_active = true
       LEFT JOIN booking_items bi ON bi.room_id = r.id
-      LEFT JOIN bookings b ON b.id = bi.booking_id AND b.status NOT IN ('cancelled', 'rejected')
-      WHERE r.status = 'available'
-      GROUP BY r.id, a.name, a.city
-      HAVING COUNT(bi.id) > 0
-      ORDER BY booking_count DESC, r.id DESC
+      LEFT JOIN bookings b ON b.id = bi.booking_id AND b.status IN ('confirmed', 'completed')
+      WHERE r.status = 'available' AND (r.deleted_at IS NULL OR r.deleted_at > NOW())
+      GROUP BY r.id, a.id, a.name, a.city
+      ORDER BY r.accommodation_id, COUNT(bi.id) DESC, r.price_per_night DESC
       LIMIT 3
     `;
 
     const hottestResult = await db.query(hottestQuery);
-    const hottestRooms = hottestResult.rows;
-
-    // If we have fewer than 3 rooms with bookings, fill with other available rooms
-    if (hottestRooms.length < 3) {
-      const excludeIds = hottestRooms.map((room: { id: number }) => room.id);
-      const remainingCount = 3 - hottestRooms.length;
-      
-      const fillQuery = `
-        SELECT r.*,
-               a.name as accommodation_name,
-               a.city as accommodation_city,
-               0 as booking_count,
-               COALESCE(json_agg(
-                 DISTINCT jsonb_build_object('url', p.url, 'sort_order', p.sort_order, 'is_primary', p.is_primary)
-                 ORDER BY p.is_primary DESC, p.sort_order ASC
-               ) FILTER (WHERE p.id IS NOT NULL), '[]') as photos
-        FROM rooms r
-        LEFT JOIN accommodations a ON a.id = r.accommodation_id
-        LEFT JOIN room_photos p ON p.room_id = r.id
-        WHERE r.status = 'available'
-        ${excludeIds.length > 0 ? 'AND r.id NOT IN (' + excludeIds.join(',') + ')' : ''}
-        GROUP BY r.id, a.name, a.city
-        ORDER BY r.id DESC
-        LIMIT $1
-      `;
-
-      const fillResult = await db.query(fillQuery, [remainingCount]);
-      const allRooms = [...hottestRooms, ...fillResult.rows];
-      res.json(allRooms);
-    } else {
-      res.json(hottestRooms);
-    }
+    
+    // Return up to 3 rooms
+    res.json(hottestResult.rows.slice(0, 3));
   } catch (error) {
     console.error('Error fetching hottest rooms:', error);
     res.status(500).json({ error: 'Failed to fetch hottest rooms', details: error instanceof Error ? error.message : 'Unknown error' });

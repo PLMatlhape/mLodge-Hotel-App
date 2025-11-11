@@ -21,12 +21,12 @@ const Navigation: React.FC = () => {
         <div className="flex items-center justify-between">
           {/* Logo Section */}
           <Link to="/" className="flex items-center gap-2 sm:gap-3">
-            <div className="flex flex-col items-center">
-              <span className="text-white text-[8px] sm:text-xs font-semibold">THE</span>
-              <span className="text-white text-lg sm:text-2xl font-bold tracking-wide">mLODGE</span>
-              <span className="text-white text-[8px] sm:text-xs font-semibold">HOTEL</span>
-            </div>
-            <span className="hidden sm:inline text-white text-xl sm:text-2xl font-light ml-2 sm:ml-4">mLodge Hotel</span>
+            <img 
+              src="/mlodge-logo.png" 
+              alt="mLodge Hotel Logo" 
+              className="h-10 sm:h-12 w-auto"
+            />
+            <span className="text-white text-lg sm:text-2xl font-bold tracking-wide leading-tight">mLodge Hotel</span>
           </Link>
 
           {/* Mobile Menu Button */}

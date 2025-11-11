@@ -40,7 +40,7 @@ interface HottestRoomsProps {
 
 const HottestRooms: React.FC<HottestRoomsProps> = ({ onRoomClick }) => {
   const dispatch = useAppDispatch();
-  const { rooms: reduxRooms } = useAppSelector((state) => state.rooms);
+  const { hottestRooms: reduxRooms } = useAppSelector((state) => state.rooms);
 
   // Fetch hottest rooms (top 3 most booked) from database on component mount
   useEffect(() => {
@@ -48,10 +48,10 @@ const HottestRooms: React.FC<HottestRoomsProps> = ({ onRoomClick }) => {
   }, [dispatch]);
 
   // Transform Redux rooms to match the Room interface
-  // Backend already returns only the top 3 most booked available rooms
-  const rooms: Room[] = reduxRooms.map((room) => {
+  // Backend returns top 3 most booked available rooms, but ensure max 3 here too
+  const rooms: Room[] = reduxRooms.slice(0, 3).map((room) => {
     const roomData = room as unknown as Record<string, unknown>;
-    const photos = (roomData.photos as Array<{ url: string; is_primary: boolean }>) || [];
+    const photos = (roomData.photos as Array<{ url: string; sort_order?: number }>) || [];
     const firstPhoto = photos[0]?.url || '';
     
     return {
@@ -114,49 +114,49 @@ const HottestRooms: React.FC<HottestRoomsProps> = ({ onRoomClick }) => {
   return (
     <div>
       {/* Hottest Rooms Section */}
-      <div className="bg-[#66778E] py-20">
-        <div className="max-w-7xl mx-auto px-8">
+      <div className="bg-[#66778E] py-12 sm:py-16 lg:py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
-          <div className="text-center mb-16">
-            <h2 className="text-white text-5xl font-bold mb-4">
+          <div className="text-center mb-8 sm:mb-12 lg:mb-16">
+            <h2 className="text-white text-3xl sm:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4">
               Hottest Rooms to Book
             </h2>
-            <p className="text-white text-xl font-light">
+            <p className="text-white text-base sm:text-lg lg:text-xl font-light px-4">
               Featuring our most booked rooms and best available accommodations
             </p>
           </div>
 
           {/* Rooms Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {rooms.map((room) => (
               <div 
                 key={room.id}
-                className="bg-white rounded-3xl overflow-hidden shadow-xl transform transition-transform hover:scale-105"
+                className="bg-white rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl transform transition-transform hover:scale-105"
               >
                 {/* Room Image */}
-                <div className="relative h-64 overflow-hidden">
+                <div className="relative h-48 sm:h-56 lg:h-64 overflow-hidden">
                   <img 
                     src={room.image || '/placeholder-room.jpg'} 
                     alt={room.name}
                     className="w-full h-full object-cover"
                   />
                   {/* Badge */}
-                  <div className="absolute top-4 left-4 bg-[#00CD07] text-white px-4 py-2 rounded-lg font-semibold text-sm">
+                  <div className="absolute top-3 left-3 sm:top-4 sm:left-4 bg-[#00CD07] text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-semibold text-xs sm:text-sm">
                     {room.badge}
                   </div>
                 </div>
 
                 {/* Room Details */}
-                <div className="p-6">
-                  <h3 className="text-gray-900 text-2xl font-bold mb-3">
+                <div className="p-4 sm:p-6">
+                  <h3 className="text-gray-900 text-xl sm:text-2xl font-bold mb-2 sm:mb-3">
                     {room.name}
                   </h3>
-                  <p className="text-gray-600 text-sm mb-6 leading-relaxed">
+                  <p className="text-gray-600 text-sm mb-4 sm:mb-6 leading-relaxed line-clamp-2">
                     {room.description}
                   </p>
 
                   {/* Room Features */}
-                  <div className="flex items-center gap-6 mb-6 text-gray-700">
+                  <div className="flex items-center gap-3 sm:gap-6 mb-4 sm:mb-6 text-gray-700 flex-wrap">
                     {/* Beds */}
                     <div className="flex items-center gap-1">
                       <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -183,22 +183,22 @@ const HottestRooms: React.FC<HottestRoomsProps> = ({ onRoomClick }) => {
                   </div>
 
                   {/* Price and Book Button */}
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
                     <div>
-                      <span className="text-gray-900 text-3xl font-bold">R{room.price}</span>
-                      <span className="text-gray-500 text-sm">/night</span>
+                      <span className="text-gray-900 text-2xl sm:text-3xl font-bold">R{room.price}</span>
+                      <span className="text-gray-500 text-xs sm:text-sm">/night</span>
                     </div>
                     {onRoomClick ? (
                       <button
                         onClick={() => onRoomClick(room)}
-                        className="bg-[#0F51AF] text-white px-6 py-2.5 rounded-lg hover:bg-[#0d4291] transition-colors font-medium"
+                        className="w-full sm:w-auto bg-[#0F51AF] text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg hover:bg-[#0d4291] transition-colors font-medium text-sm sm:text-base"
                       >
                         Book Now
                       </button>
                     ) : (
                       <Link 
                         to="/dashboard" 
-                        className="bg-[#0F51AF] text-white px-6 py-2.5 rounded-lg hover:bg-[#0d4291] transition-colors font-medium"
+                        className="w-full sm:w-auto bg-[#0F51AF] text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg hover:bg-[#0d4291] transition-colors font-medium text-sm sm:text-base text-center"
                       >
                         Book Now
                       </Link>
@@ -212,36 +212,36 @@ const HottestRooms: React.FC<HottestRoomsProps> = ({ onRoomClick }) => {
       </div>
 
       {/* Hotel Amenities Section */}
-      <div className="bg-[#D9D9D9] py-20">
-        <div className="max-w-7xl mx-auto px-8">
+      <div className="bg-[#D9D9D9] py-12 sm:py-16 lg:py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
-          <div className="text-center mb-16">
-            <h2 className="text-gray-900 text-5xl font-bold mb-4">
+          <div className="text-center mb-8 sm:mb-12 lg:mb-16">
+            <h2 className="text-gray-900 text-3xl sm:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4">
               Hotel Amenities
             </h2>
-            <p className="text-gray-700 text-xl font-light">
+            <p className="text-gray-700 text-base sm:text-lg lg:text-xl font-light px-4">
               Enjoy a wide range of premium facilities and services designed to make your stay exceptional
             </p>
           </div>
 
           {/* Amenities Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {amenities.map((amenity) => (
               <div 
                 key={amenity.id}
-                className="bg-[#001C43] rounded-2xl p-8 text-white transform transition-transform hover:scale-105"
+                className="bg-[#001C43] rounded-xl sm:rounded-2xl p-6 sm:p-8 text-white transform transition-transform hover:scale-105"
               >
                 {/* Icon */}
-                <div className="mb-6">
+                <div className="mb-4 sm:mb-6">
                   <img 
                     src={amenity.icon || '/placeholder-icon.png'} 
                     alt={amenity.title}
-                    className="w-16 h-16 object-contain"
+                    className="w-12 h-12 sm:w-16 sm:h-16 object-contain"
                   />
                 </div>
 
                 {/* Content */}
-                <h3 className="text-xl font-bold mb-3">
+                <h3 className="text-lg sm:text-xl font-bold mb-2 sm:mb-3">
                   {amenity.title}
                 </h3>
                 <p className="text-gray-300 text-sm leading-relaxed">

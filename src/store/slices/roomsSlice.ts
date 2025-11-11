@@ -36,6 +36,7 @@ interface Accommodation {
 
 interface RoomsState {
   rooms: Room[];
+  hottestRooms: Room[];
   accommodations: Accommodation[];
   selectedRoom: Room | null;
   loading: boolean;
@@ -44,6 +45,7 @@ interface RoomsState {
 
 const initialState: RoomsState = {
   rooms: [],
+  hottestRooms: [],
   accommodations: [],
   selectedRoom: null,
   loading: false,
@@ -164,7 +166,7 @@ const roomsSlice = createSlice({
       })
       .addCase(fetchHottestRooms.fulfilled, (state, action) => {
         state.loading = false;
-        state.rooms = action.payload;
+        state.hottestRooms = action.payload;
       })
       .addCase(fetchHottestRooms.rejected, (state, action) => {
         state.loading = false;
