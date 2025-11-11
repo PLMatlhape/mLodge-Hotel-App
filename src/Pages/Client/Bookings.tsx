@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { fetchMyBookings } from '../../store/slices/bookingsSlice';
 
@@ -27,6 +28,7 @@ interface Booking {
 }
 
 const Bookings = () => {
+  const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { bookings, loading } = useAppSelector((state) => state.bookings);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
@@ -108,8 +110,17 @@ const Bookings = () => {
   return (
     <div className="min-h-screen bg-[#001F3F] py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+        {/* Back Button and Header */}
         <div className="mb-8">
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="mb-4 flex items-center gap-2 text-white hover:text-gray-300 transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            <span>Back to Dashboard</span>
+          </button>
           <h1 className="text-3xl font-bold text-white mb-2">
             My Bookings
           </h1>

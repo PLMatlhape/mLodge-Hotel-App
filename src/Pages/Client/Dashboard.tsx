@@ -64,7 +64,7 @@ const Dashboard: React.FC = () => {
     
     // Check if this accommodation is in favorites
     const accommodationId = roomData.accommodation_id as number | undefined;
-    const isFavorite = accommodationId ? favourites.some(fav => fav.id === accommodationId) : false;
+    const isFavorite = accommodationId ? favourites.some(fav => fav.favourite_id === accommodationId) : false;
     
     return {
       id: roomData.id as number,

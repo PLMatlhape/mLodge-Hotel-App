@@ -23,12 +23,14 @@ interface Favourite {
   beds: number;
   baths: number;
   area: number;
-  photos: Array<{ url: string; is_primary: boolean }>;
+  accommodation_name?: string;
+  city?: string;
+  photos: Array<{ url: string; sort_order?: number; is_primary?: boolean }>;
   avg_rating: number;
   review_count: number;
-  price: number;
-  image: string;
-  badge: string;
+  price?: number;
+  image?: string;
+  badge?: string;
   rating?: number;
   guests?: string;
   amenities?: string[];
@@ -179,6 +181,14 @@ const Favourites: React.FC = () => {
           </div>
 
           {/* Favourites Content */}
+          {!loading && !error && favourites.length > 0 && (
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-white">
+                My Favourites ({favourites.length})
+              </h2>
+            </div>
+          )}
+          
           {loading ? (
             <div className="bg-white rounded-lg p-12 text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0F51AF] mx-auto"></div>
@@ -215,7 +225,7 @@ const Favourites: React.FC = () => {
                 const imageUrl = primaryPhoto?.url || '/placeholder-room.jpg';
 
                 return (
-                  <div key={room.favourite_id} className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+                  <div key={`fav-${room.id}-${room.favourite_id}`} className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
                     {/* Room Image */}
                     <div className="relative h-48">
                       <img src={imageUrl} alt={room.name} className="w-full h-full object-cover" />
@@ -228,12 +238,14 @@ const Favourites: React.FC = () => {
                       {/* Rating */}
                       <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg flex items-center gap-1">
                         <img src={starIcon} alt="Rating" className="w-4 h-4" />
-                        <span className="text-gray-900 font-semibold text-sm">{room.avg_rating.toFixed(1)}</span>
+                        <span className="text-gray-900 font-semibold text-sm">
+                          {room.avg_rating ? Number(room.avg_rating).toFixed(1) : '5.0'}
+                        </span>
                       </div>
 
                       {/* Remove from favourites */}
                       <button
-                        onClick={() => handleRemoveFavourite(room.id)}
+                        onClick={() => handleRemoveFavourite(room.favourite_id)}
                         className="absolute bottom-3 right-3 w-12 h-12 rounded-full bg-red-500 flex items-center justify-center transition-all hover:bg-red-600"
                         aria-label="Remove from favourites"
                       >

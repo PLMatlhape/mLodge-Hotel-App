@@ -59,7 +59,7 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
   
   // Check if this room's accommodation is favorited
   const isFavorite = room.accommodation_id 
-    ? favourites.some(fav => fav.id === room.accommodation_id) 
+    ? favourites.some(fav => fav.favourite_id === room.accommodation_id) 
     : false;
   
   // Get room images from photos array or fallback

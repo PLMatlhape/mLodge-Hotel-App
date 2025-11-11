@@ -14,7 +14,9 @@ interface Favourite {
   beds: number;
   baths: number;
   area: number;
-  photos: Array<{ url: string; is_primary: boolean }>;
+  accommodation_name?: string;
+  city?: string;
+  photos: Array<{ url: string; sort_order?: number; is_primary?: boolean }>;
   avg_rating: number;
   review_count: number;
 }
