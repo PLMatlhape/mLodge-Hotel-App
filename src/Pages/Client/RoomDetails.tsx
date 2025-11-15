@@ -57,10 +57,8 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
   // Get today's date in YYYY-MM-DD format
   const today = new Date().toISOString().split('T')[0];
   
-  // Check if this room's accommodation is favorited
-  const isFavorite = room.accommodation_id 
-    ? favourites.some(fav => fav.favourite_id === room.accommodation_id) 
-    : false;
+  // Check if this specific room is favorited (match by room id returned from favourites API)
+  const isFavorite = room.id ? favourites.some(fav => fav.id === room.id) : false;
   
   // Get room images from photos array or fallback
   const roomImages = room.photos && room.photos.length > 0 
@@ -95,27 +93,20 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
   // Handle favorite toggle
   const handleFavoriteClick = async () => {
     if (!isAuthenticated) {
-      // Store current page path for redirect after login
       sessionStorage.setItem('redirectAfterLogin', window.location.pathname);
       toast.error('Please login to add to favorites');
-      onClose(); // Close the modal first
+      onClose();
       navigate('/login');
       return;
     }
-    
-    if (!room.accommodation_id) {
+    if (!room.id) {
       toast.error('Unable to add to favorites');
       return;
     }
-
     try {
-      // Toggle favorite in backend
-      const result = await dispatch(toggleFavourite(room.accommodation_id)).unwrap();
-      
-      // Refetch favorites to update the UI
+      // Toggle favorite in backend using room id
+      const result = await dispatch(toggleFavourite(room.id)).unwrap();
       await dispatch(fetchFavourites()).unwrap();
-      
-      // Show appropriate message based on action
       if (result.action === 'added') {
         toast.success('Added to favorites');
       } else {

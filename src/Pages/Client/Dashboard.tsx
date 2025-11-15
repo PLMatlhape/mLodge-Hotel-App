@@ -37,7 +37,7 @@ const Dashboard: React.FC = () => {
   const dispatch = useAppDispatch();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   const { rooms: reduxRooms, loading, error } = useAppSelector((state) => state.rooms);
-  const { favourites } = useAppSelector((state) => state.favourites);
+  const { favourites, toggleLoading } = useAppSelector((state) => state.favourites);
   
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -62,9 +62,9 @@ const Dashboard: React.FC = () => {
     const photos = (roomData.photos as Array<{ url: string; sort_order?: number }>) || [];
     const firstPhoto = photos[0]?.url || '/placeholder-room.svg';
     
-    // Check if this accommodation is in favorites
-    const accommodationId = roomData.accommodation_id as number | undefined;
-    const isFavorite = accommodationId ? favourites.some(fav => fav.favourite_id === accommodationId) : false;
+  // Check if this specific room is in favorites (match by room id returned from favourites API)
+  const roomId = roomData.id as number | undefined;
+  const isFavorite = roomId ? favourites.some(fav => fav.id === roomId) : false;
     
     return {
       id: roomData.id as number,
@@ -116,7 +116,7 @@ const Dashboard: React.FC = () => {
     }
   }, [isAuthenticated, rooms]);
 
-  const toggleFavoriteLocal = async (roomId: number) => {
+  const toggleFavoriteLocal = async (roomId?: number) => {
     // Check if user is authenticated before allowing favorite toggle
     if (!isAuthenticated) {
       // Store the current path to redirect back after login
@@ -126,20 +126,19 @@ const Dashboard: React.FC = () => {
       return;
     }
 
-    // Find the room to get its accommodation_id
-    const room = rooms.find(r => r.id === roomId);
-    if (!room || !room.accommodation_id) {
+    // roomId is provided directly by the caller
+    if (!roomId) {
       toast.error('Unable to add to favorites');
       return;
     }
 
     try {
-      // Toggle favorite in backend
-      const result = await dispatch(toggleFavourite(room.accommodation_id)).unwrap();
-      
-      // Refetch favorites to update the UI
+      // Toggle favorite in backend using the room id directly
+      const result = await dispatch(toggleFavourite(roomId)).unwrap();
+
+      // Refresh favourites from server so UI (cards and favourites page) stay in sync
       await dispatch(fetchFavourites()).unwrap();
-      
+
       // Show appropriate message based on action
       if (result.action === 'added') {
         toast.success('Added to favorites');
@@ -487,12 +486,17 @@ const Dashboard: React.FC = () => {
                     </div>
 
                     {/* Favorite */}
-                    <button 
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        toggleFavoriteLocal(room.id);
+                        if (!toggleLoading) {
+                          toggleFavoriteLocal(room.id);
+                        }
                       }}
-                      className="absolute bottom-3 right-3 p-1 transition-all hover:scale-110"
+                      disabled={toggleLoading || !room.id}
+                      className={`absolute bottom-3 right-3 p-1 transition-all hover:scale-110 ${
+                        toggleLoading ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
                       aria-label={room.favorite ? "Remove from favorites" : "Add to favorites"}
                     >
                       <img 

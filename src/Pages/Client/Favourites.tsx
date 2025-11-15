@@ -57,14 +57,14 @@ const Favourites: React.FC = () => {
 
 
 
-  const handleRemoveFavourite = async (accommodationId: number) => {
+  const handleRemoveFavourite = async (roomId: number) => {
     if (!isAuthenticated) {
       navigate('/login');
       return;
     }
 
     try {
-      await dispatch(removeFavourite(accommodationId)).unwrap();
+      await dispatch(removeFavourite(roomId)).unwrap();
     } catch (error) {
       console.error('Failed to remove favourite:', error);
     }
@@ -245,7 +245,7 @@ const Favourites: React.FC = () => {
 
                       {/* Remove from favourites */}
                       <button
-                        onClick={() => handleRemoveFavourite(room.favourite_id)}
+                        onClick={() => handleRemoveFavourite(room.id)}
                         className="absolute bottom-3 right-3 w-12 h-12 rounded-full bg-red-500 flex items-center justify-center transition-all hover:bg-red-600"
                         aria-label="Remove from favourites"
                       >

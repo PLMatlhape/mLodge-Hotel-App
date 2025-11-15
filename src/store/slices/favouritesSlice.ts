@@ -24,12 +24,14 @@ interface Favourite {
 interface FavouritesState {
   favourites: Favourite[];
   loading: boolean;
+  toggleLoading: boolean; // Specific loading state for toggle operations
   error: string | null;
 }
 
 const initialState: FavouritesState = {
   favourites: [],
   loading: false,
+  toggleLoading: false,
   error: null,
 };
 
@@ -49,10 +51,10 @@ export const fetchFavourites = createAsyncThunk(
 
 export const toggleFavourite = createAsyncThunk(
   'favourites/toggleFavourite',
-  async (accommodationId: number, { rejectWithValue }) => {
+  async (roomId: number, { rejectWithValue }) => {
     try {
-      const response = await api.post('/favourites/toggle', { accommodation_id: accommodationId });
-      return { accommodationId, ...response.data };
+      const response = await api.post('/favourites/toggle', { room_id: roomId });
+      return { roomId, ...response.data };
     } catch (error) {
       const axiosError = error as { response?: { data?: { error?: string } } };
       return rejectWithValue(axiosError.response?.data?.error || 'Failed to toggle favourite');
@@ -62,10 +64,10 @@ export const toggleFavourite = createAsyncThunk(
 
 export const removeFavourite = createAsyncThunk(
   'favourites/removeFavourite',
-  async (accommodationId: number, { rejectWithValue }) => {
+  async (roomId: number, { rejectWithValue }) => {
     try {
-      await api.delete(`/favourites/${accommodationId}`);
-      return accommodationId;
+      await api.delete(`/favourites/${roomId}`);
+      return roomId;
     } catch (error) {
       const axiosError = error as { response?: { data?: { error?: string } } };
       return rejectWithValue(axiosError.response?.data?.error || 'Failed to remove favourite');
@@ -111,22 +113,22 @@ const favouritesSlice = createSlice({
       })
       // Toggle favourite
       .addCase(toggleFavourite.pending, (state) => {
-        state.loading = true;
+        state.toggleLoading = true;
         state.error = null;
       })
       .addCase(toggleFavourite.fulfilled, (state, action) => {
-        state.loading = false;
+        state.toggleLoading = false;
         // Update local state based on toggle result
-        const { accommodationId, action: toggleAction } = action.payload;
+        const { roomId, action: toggleAction } = action.payload;
         if (toggleAction === 'added') {
           // If added, we might need to refetch or update from server
           // For now, we'll refetch favourites
         } else if (toggleAction === 'removed') {
-          state.favourites = state.favourites.filter(fav => fav.id !== accommodationId);
+          state.favourites = state.favourites.filter(fav => fav.id !== roomId);
         }
       })
       .addCase(toggleFavourite.rejected, (state, action) => {
-        state.loading = false;
+        state.toggleLoading = false;
         state.error = action.payload as string;
       })
       // Remove favourite
