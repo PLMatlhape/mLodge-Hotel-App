@@ -3,15 +3,18 @@ import React from 'react';
 export const Dialog = ({ children, open, onOpenChange }: { children: React.ReactNode; open: boolean; onOpenChange: (open: boolean) => void }) => (
   <>
     {open && (
-      <div className="fixed inset-0 z-50 bg-black/50" onClick={() => onOpenChange(false)}>
-        <div 
-          className="fixed top-1/2" 
-          style={{ 
-            left: '240px', // Start at sidebar end
-            transform: 'translateY(-50%)' // Center vertically only
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
+      <div
+        className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+        role="dialog"
+        aria-modal="true"
+        onClick={() => onOpenChange(false)}
+      >
+        {/*
+          Use a centered container that is responsive: on very small screens the
+          dialog will be full-width (padded), on larger screens it will use the
+          child's width (DialogContent controls max-width).
+        */}
+        <div className="w-full max-w-4xl mx-auto" onClick={(e) => e.stopPropagation()}>
           {children}
         </div>
       </div>
@@ -20,7 +23,7 @@ export const Dialog = ({ children, open, onOpenChange }: { children: React.React
 );
 
 export const DialogContent = ({ children, style, className = '' }: { children: React.ReactNode; style?: React.CSSProperties; className?: string }) => (
-  <div className={`bg-white rounded-lg p-6 max-w-md w-full mx-4 ${className}`} style={style}>
+  <div className={`bg-white rounded-lg p-6 w-full mx-auto ${className}`} style={style}>
     {children}
   </div>
 );

@@ -311,7 +311,7 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
             <div className="lg:col-span-2 space-y-6">
               {/* Main Image and Gallery */}
               <div className="space-y-4">
-                <div className="relative h-96 rounded-xl overflow-hidden">
+                <div className="relative h-64 lg:h-96 rounded-xl overflow-hidden">
                   <img src={mainImage} alt={room.name} className="w-full h-full object-cover" />
                   
                   {/* Badge */}
@@ -342,7 +342,7 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
                   {thumbnails.map((img, index) => (
                     <div 
                       key={index} 
-                      className="relative h-32 rounded-lg overflow-hidden cursor-pointer group"
+                      className="relative h-20 sm:h-32 rounded-lg overflow-hidden cursor-pointer group thumbnail-h"
                       onClick={() => handleImageSwap(index)}
                     >
                       <img 
@@ -383,7 +383,7 @@ const RoomDetails: React.FC<RoomDetailsProps> = ({ room, onClose }) => {
                 </div>
 
                 {/* Room Stats */}
-                <div className="grid grid-cols-4 gap-4 mb-6">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
                   <div className="bg-gray-100 rounded-lg p-4 text-center">
                     <img src={bedIcon} alt="Beds" className="w-8 h-8 mx-auto mb-2" />
                     <p className="font-semibold text-gray-900">{room.beds} beds</p>

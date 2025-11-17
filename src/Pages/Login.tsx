@@ -87,16 +87,16 @@ const Login: React.FC = () => {
       </div>
 
       {/* Back to Home Button */}
-      <Link 
-        to="/" 
-        className="absolute top-8 right-8 z-20 flex items-center gap-2 text-white hover:opacity-80 transition-opacity"
+      <Link
+        to="/"
+        className="absolute top-12 sm:top-8 right-8 z-20 flex items-center gap-2 text-white hover:opacity-80 transition-opacity"
       >
         <img src={backIcon} alt="Back" className="w-6 h-6" />
         <span className="text-lg font-medium">Home</span>
       </Link>
 
       {/* Logo */}
-      <div className="absolute top-8 left-8 z-20 flex items-center gap-3">
+      <div className="absolute top-12 sm:top-8 left-8 z-20 flex items-center gap-3">
         <div className="w-14 h-14 rounded-full bg-[#001C43] flex items-center justify-center">
           <img src={logo} alt="mLodge Hotel Logo" className="w-10 h-10 object-contain" />
         </div>

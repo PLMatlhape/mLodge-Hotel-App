@@ -31,3 +31,64 @@ body {
 .admin-scrollbar-hide::-webkit-scrollbar {
   display: none; /* Chrome, Safari, Opera */
 }
+
+/* Global responsive helpers to avoid overflow at very small widths (320px, 480px) */
+img, video, svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Ensure containers use comfortable padding on small screens */
+@media (max-width: 480px) {
+  .max-w-7xl {
+    padding-left: 1rem; /* 16px */
+    padding-right: 1rem;
+  }
+
+  /* Reduce very tall fixed heights to avoid overflow */
+  .h-96 {
+    height: 16rem !important; /* ~256px */
+  }
+
+  .h-64 {
+    height: 12rem !important; /* ~192px */
+  }
+
+  .thumbnail-h {
+    height: 5rem !important; /* thumbnails compact on small screens */
+  }
+
+  /* Smaller headings on tiny screens */
+  .text-4xl {
+    font-size: 1.5rem !important;
+  }
+
+  .text-2xl {
+    font-size: 1.125rem !important;
+  }
+}
+
+@media (max-width: 320px) {
+  .h-96 {
+    height: 12rem !important;
+  }
+
+  .h-64 {
+    height: 10rem !important;
+  }
+
+  .thumbnail-h {
+    height: 4rem !important;
+  }
+
+  /* Tighter heading sizes at the very smallest widths */
+  .text-4xl { font-size: 1.25rem !important; }
+  .text-2xl { font-size: 1rem !important; }
+}
+
+/* Small utility to prevent fixed elements from overflowing horizontally */
+.responsive-no-overflow {
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}

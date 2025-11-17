@@ -124,7 +124,7 @@ const Favourites: React.FC = () => {
           {/* Title Section with Hamburger Menu */}
           <div className="mb-8 flex items-start justify-between">
             <div>
-              <h2 className="text-white text-4xl font-bold mb-2">Your Favourites</h2>
+              <h2 className="text-white text-2xl sm:text-4xl font-bold mb-2">Your Favourites</h2>
               <p className="text-gray-300 text-lg">Your saved accommodations</p>
             </div>
 
@@ -225,9 +225,9 @@ const Favourites: React.FC = () => {
                 const imageUrl = primaryPhoto?.url || '/placeholder-room.jpg';
 
                 return (
-                  <div key={`fav-${room.id}-${room.favourite_id}`} className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
-                    {/* Room Image */}
-                    <div className="relative h-48">
+          <div key={`fav-${room.id}-${room.favourite_id}`} className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+            {/* Room Image */}
+            <div className="relative h-40 sm:h-48">
                       <img src={imageUrl} alt={room.name} className="w-full h-full object-cover" />
 
                       {/* Badge */}

@@ -3,6 +3,7 @@ import Home from './Pages/Home'
 import Login from './Pages/Login'
 import Register from './Pages/Register'
 import Contact from './Pages/Contact'
+import Terms from './Pages/Terms'
 import Dashboard from './Pages/Client/Dashboard'
 import Profile from './Pages/Client/Profile'
 import Favourites from './Pages/Client/Favourites'
@@ -20,6 +21,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="/terms" element={<Terms />} />
 
         {/* Client Routes */}
         <Route path="/dashboard" element={<Dashboard />} />

@@ -215,7 +215,7 @@ const Dashboard: React.FC = () => {
         {/* Title Section with Hamburger Menu */}
         <div className="mb-8 flex items-start justify-between">
           <div>
-            <h2 className="text-white text-4xl font-bold mb-2">Find Your Perfect Room</h2>
+            <h2 className="text-white text-2xl sm:text-4xl font-bold mb-2">Find Your Perfect Room</h2>
             <p className="text-gray-300 text-lg">Search and filter through our collection of premium rooms</p>
           </div>
 
@@ -315,7 +315,7 @@ const Dashboard: React.FC = () => {
         <div className="flex gap-6">
           {/* Left Sidebar Filter Panel */}
           {showFilters && (
-            <div className="w-80 flex-shrink-0">
+            <div className="w-full sm:w-80 flex-shrink-0">
               <div className="bg-white rounded-lg p-6 sticky top-6">
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="text-gray-900 text-xl font-bold">Filters</h3>
