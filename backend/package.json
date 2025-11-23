@@ -10,7 +10,8 @@
     "test-db": "ts-node scripts/testDatabase.ts",
     "init-db": "ts-node scripts/initDatabase.ts",
     "migrate:rooms": "ts-node scripts/migrateRoomFields.ts",
-    "migrate:photos": "ts-node scripts/createPhotosTable.ts"
+    "migrate:photos": "ts-node scripts/createPhotosTable.ts",
+    "vercel-build": "npm run build"
   },
   "keywords": [
     "hotel",
